@@ -1,0 +1,64 @@
+Bối cảnh: files/vbpl_extract.py có hàm extract_amendments(text) (~dòng 731) dùng regex RX_AMEND
+(dòng 156-157) bắt bất kỳ chỗ nào xuất hiện các từ "sửa đổi", "bổ sung", "bãi bỏ", "thay thế",
+"hủy bỏ", "hết hiệu lực", "ngưng hiệu lực" trong TOÀN BỘ nội dung văn bản, không cần ngữ cảnh là
+một điều khoản sửa đổi luật thật sự. Kết quả nạp vào bảng `amendments` trong DuckDB.
+
+Tôi (reviewer) đã verify trực tiếp trên legal_sample_200.duckdb (898 dòng amendments) và phát hiện
+vấn đề precision nghiêm trọng:
+
+1. 339/898 (37.8%) dòng KHÔNG có target_so_ky_hieu VÀ KHÔNG có target_dieu — tức bắt trúng các từ
+   trên trong văn xuôi thông thường không liên quan luật (vd "sửa đổi phần mềm để tăng cường chức
+   năng" trong Nghị định 45/2026/NĐ-CP về đầu tư CNTT — nói về sửa phần mềm máy tính, không phải
+   sửa đổi văn bản pháp luật).
+
+2. Trong số đó, tất cả 5/5 dòng op='EXPIRE' không có target đều là cùng MỘT pattern boilerplate:
+   "hết hiệu lực (kể từ ngày/thi hành) [Luật/Nghị định/Nghị quyết/Quyết định/Thông tư] này có hiệu
+   lực..." — đây là câu chuẩn mọi văn bản pháp luật VN đều có ở cuối (nói về hiệu lực của CHÍNH văn
+   bản đang đọc), KHÔNG PHẢI bãi bỏ/EXPIRE một văn bản khác. Bị bắt nhầm vì regex chỉ tìm từ khóa
+   "hết hiệu lực" mà không loại trừ trường hợp tự tham chiếu ("... này có hiệu lực").
+
+3. Ngay cả một số dòng CÓ target_dieu cũng nghi ngờ là false positive do cơ chế cửa sổ trượt
+   (win = text[m.end(): m.end()+220]; prov = RX_PROV_REF.search(win)) bắt trúng số Điều của ĐOẠN
+   VĂN BẢN KẾ TIẾP tình cờ nằm trong cửa sổ 220 ký tự, chứ không phải đích thật của thao tác sửa
+   đổi. Ví dụ: "hết hiệu lực thi hành kể từ ngày Quyết định này có hiệu lực thi hành. Điều 3. Trách
+   nhiệm thi hành..." → target_dieu bị gán ='3' dù đó là tiêu đề Điều kế tiếp, không liên quan.
+
+Ngược lại, 254 dòng có target_so_ky_hieu (tham chiếu đến 1 văn bản khác bằng số hiệu cụ thể, vd
+"bãi bỏ Quyết định số 17/2022/QĐ-UBND ngày...") nhìn có vẻ đúng — giữ nguyên logic đó, không đụng.
+
+Việc cần làm — TỰ VERIFY lại các con số/mẫu trên bằng query trực tiếp trên legal_sample_200.duckdb
+trước khi sửa (đừng tin số liệu tôi đưa ra là tuyệt đối đúng, kiểm tra lại), sau đó cải thiện
+precision của extract_amendments() theo 2 hướng, MỖI HƯỚNG PHẢI CÓ BẰNG CHỨNG DỮ LIỆU THẬT ủng hộ
+trước khi áp dụng:
+
+A. Loại trừ match "hết hiệu lực"/"ngưng hiệu lực" khi ngay sau đó (trong một cửa sổ ngắn, vd 40-60
+   ký tự) là cụm tự tham chiếu tới chính văn bản đang đọc (regex kiểu
+   r"(Luật|Nghị định|Nghị quyết|Quyết định|Thông tư|Pháp lệnh)\s+này\s+có hiệu lực" hoặc tương tự
+   — kiểm tra dữ liệu thật để biết đúng các biến thể cụm từ, đừng đoán danh sách loại văn bản, lấy
+   từ RX_DOC_REF hoặc danh sách loai_van_ban thật trong bảng documents nếu cần). Đây KHÔNG phải một
+   thao tác sửa đổi nhắm vào văn bản khác, không nên tạo bản ghi amendments cho trường hợp này.
+
+B. Với các match KHÔNG rơi vào case A và KHÔNG có target_so_ky_hieu: chỉ giữ lại bản ghi nếu có
+   evidence rõ ràng đây là một điều khoản sửa đổi thật (vd nằm trong context có target_dieu VÀ
+   target_dieu đó không phải do cửa sổ trượt bắt nhầm tiêu đề Điều tiếp theo — có thể kiểm tra bằng
+   cách giới hạn cửa sổ tìm target_dieu chỉ trong phần TRƯỚC dấu chấm câu/newline gần nhất thay vì
+   220 ký tự cố định cắt ngang nhiều câu, hoặc yêu cầu RX_PROV_REF match nằm trong cùng câu với động
+   từ sửa đổi). Nếu vẫn không chắc phân biệt được false positive khỏi true positive một cách an
+   toàn cho case B, ưu tiên: KHÔNG được cố "ép" giảm false positive bằng cách xoá luôn true positive
+   — nếu không đủ tín hiệu rõ ràng, giữ nguyên và báo cáo lại cho tôi thay vì tự đoán.
+
+Sau khi sửa xong:
+1. python -m py_compile files\vbpl_extract.py
+2. python -u files\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite
+3. python files\validate_parse_invariants.py --db legal_sample_200.duckdb --expected-docs 200
+   (phải vẫn PASS=28 WARN=0 FAIL=0)
+4. Thêm 1 invariant check mới vào files/validate_parse_invariants.py (theo đúng pattern check hiện
+   có — xem check cuối cùng trong file để bám style) tên "amendments_no_self_referential_expire":
+   đếm số dòng amendments có op='EXPIRE' và evidence_text khớp pattern tự tham chiếu ở mục A —
+   PASS khi count=0. Đây là regression guard để lỗi này không quay lại.
+5. Báo cáo: tổng amendments trước/sau, số dòng bị loại bỏ theo từng lý do (A vs B), và in ra 10
+   dòng mẫu TRƯỚC ĐÂY có target_so_ky_hieu hoặc target_dieu (tức có vẻ "hợp lệ") để tôi xác nhận
+   KHÔNG dòng nào trong số đó bị loại bỏ nhầm (không được làm giảm recall của các case rõ ràng đúng).
+
+Ràng buộc: không sửa gì khác ngoài extract_amendments() và invariant mới. Không thêm comment giải
+thích code làm gì (chỉ comment khi lý do không hiển nhiên). In ra danh sách file đã sửa ở cuối.

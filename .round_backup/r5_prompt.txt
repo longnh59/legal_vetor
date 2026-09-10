@@ -1,0 +1,100 @@
+Bối cảnh: Vừa chạy /code-review đa-agent trên thư mục crawler/ (Scrapy crawler cho vbpl.vn + pipeline làm sạch dataset). 9 finding đã được xác minh độc lập (5 qua subagent riêng, 4 qua đọc code trực tiếp), tất cả CONFIRMED (1 PLAUSIBLE). Sửa toàn bộ 9 finding dưới đây trong 1 lượt, TỰ VERIFY lại từng finding bằng cách đọc code thật trước khi sửa (đừng tin mô tả là tuyệt đối đúng nếu code khác đi).
+
+=== 1. crawler/vbpl/middlewares.py:160 — mất request âm thầm khi lỗi exception ===
+process_exception ban proxy và gọi _retry_with_new_proxy; khi retry_times vượt PROXY_MAX_RETRIES=20,
+hàm trả về None -> Scrapy drop request hoàn toàn, không request nào khác được tạo, không errback nào
+được gọi (spiders/vbpl.py không set errback cho _catalog_request/_request_if_new). So với đường lỗi
+HTTP status (handle_httpstatus_all=True) vẫn còn tạo được fallback row qua _catalog_fallback, đường
+exception mất trắng.
+Sửa: đảm bảo khi proxy retry vượt ngưỡng và middleware trả về None cho process_exception, hành vi
+tương đương đường HTTP-status — tức là cần một cách để parse_document/_catalog_fallback vẫn chạy
+được. Cách khả thi: thêm errback cho các Request trong _catalog_request và _request_if_new
+(spiders/vbpl.py) để bắt exception cuối cùng và tự sinh fallback row tương tự nhánh status>=400,
+HOẶC (nếu đơn giản/an toàn hơn) log rõ ràng số request bị mất kèm lý do để không mất âm thầm mà
+không có dấu vết trong log/output. Tự quyết định cách nào khớp với kiến trúc code hiện tại nhất,
+miễn là kết quả: exception-based failure không còn biến mất hoàn toàn không dấu vết.
+
+=== 2. crawler/vbpl/spiders/vbpl.py:101 — lỗi HTTP trên trang catalog bị nuốt ===
+_catalog_request không set meta={"handle_httpstatus_all": True} (khác với _request_if_new có set).
+Nên lỗi HTTP thật (500, 403 khi CATALOG_ACTION_ID cũ) bị HttpErrorMiddleware mặc định của Scrapy
+drop trước khi tới logic retry/log riêng trong parse_catalog (dòng ~119-137).
+Sửa: thêm cùng meta={"handle_httpstatus_all": True} vào Request được tạo trong _catalog_request,
+để response lỗi HTTP đi tới parse_catalog và được xử lý bởi logic retry/log đã có sẵn ở đó thay vì
+bị Scrapy nuốt âm thầm.
+
+=== 3. crawler/vbpl/spiders/vbpl.py:160 — None id bị stringify trước khi check falsy ===
+item_id = str(item_id) chạy TRƯỚC check `if not item_id`, nên None -> "None" (truthy), lọt qua guard.
+Sửa: đổi thứ tự — check falsy TRƯỚC khi stringify, giống đúng pattern đã có ở vòng lặp reference-target
+dòng 213-216 trong cùng file (target_id = target.get("id"); if not target_id: continue; target_id =
+str(target_id)). Áp dụng đúng thứ tự đó cho _request_if_new.
+
+=== 4. crawler/upsert_dataset.py:15 — METADATA_FIELDS thiếu "crawl_status" ===
+build_full_dataset.py:13-32 có 18 field, kết thúc bằng "crawl_status". upsert_dataset.py:15-33 chỉ có
+17 field, dừng ở "tinh_trang_hieu_luc", thiếu "crawl_status" -> mỗi lần upsert xoá âm thầm cột này.
+Sửa: thêm "crawl_status" vào cuối tuple METADATA_FIELDS trong upsert_dataset.py, khớp đúng với
+build_full_dataset.py. Kiểm tra kỹ có chỗ nào khác trong upsert_dataset.py giả định số lượng/thứ tự
+field cố định (vd string_columns, select, unique...) có thể bị ảnh hưởng bởi field mới không, xử lý
+nếu cần.
+
+=== 5. crawler/clean_dataset.py:45 — parse_vietnamese_date không check ngày hợp lệ theo tháng ===
+Validate day (1-31) và month (1-12) độc lập, không cross-check (vd 31/02/2024 lọt qua thành
+"2024-02-31"). Sửa: dùng datetime(year, month, day) (bắt ValueError) hoặc calendar.monthrange để
+validate đúng ngày theo tháng/năm (kể cả năm nhuận). Giữ nguyên các case hợp lệ đã pass trong test
+hiện có (test_clean_pipeline.py::test_parse_vietnamese_date). Thêm assertion mới vào test đó cho case
+"31/02/2024" (hoặc tương tự) phải trả về None, và 1 case hợp lệ ở năm nhuận (vd "29/02/2024" phải
+parse được vì 2024 là năm nhuận) để test cả 2 chiều.
+
+=== 6. crawler/pyproject.toml — thiếu pandas/numpy/pytest trong dependencies ===
+clean_dataset.py import pandas+numpy trực tiếp ở top-level; test_clean_pipeline.py và
+verify_clean_dataset.py import pandas; không file nào trong 3 file này nằm trong optional extra
+"validation" (chỉ có datasets+huggingface-hub). pytest không được khai báo ở đâu cả.
+Sửa: dùng đúng lệnh `uv add` để cập nhật cả pyproject.toml lẫn uv.lock đồng bộ, ĐỪNG sửa tay
+pyproject.toml rồi để uv.lock lệch:
+  - `uv add pandas numpy` (core dependencies, vì clean_dataset.py là script chính của package)
+  - `uv add --group dev pytest` (dev dependency, khớp với nhóm dev đã có sẵn chứa ruff)
+Chạy trong thư mục crawler/ (nơi có pyproject.toml này). Sau đó `uv sync` để xác nhận lock file hợp
+lệ và môi trường cài đặt được.
+
+=== 7. crawler/clean_dataset.py:191 — đọc cột không guard dù tạo cột có guard ===
+Dòng 185 tạo df[f'{field}_iso'] có điều kiện `if field in df.columns`, nhưng dòng 189 và 191 đọc
+df['tinh_trang_hieu_luc'] và df['ngay_het_hieu_luc_iso'] không điều kiện. Hiện tại chưa xảy ra lỗi vì
+2 nguồn ghi metadata.parquet đều hard-code đủ field, nhưng là bug tiềm ẩn.
+Sửa: thêm guard tương xứng cho 2 lần đọc đó (dùng .get() với default hợp lý, hoặc kiểm tra tồn tại cột
+trước khi truy cập, hoặc coalesce về Series rỗng/NaN phù hợp) — tự quyết định cách phù hợp nhất với
+logic hiện có ở đoạn đó (đọc kỹ ngữ cảnh dùng biến này ngay sau để chọn giá trị mặc định hợp lý khi
+cột không tồn tại, đừng đoán, đảm bảo không đổi hành vi khi cột CÓ tồn tại).
+
+=== 8. crawler/vbpl/spiders/vbpl.py:229 và 263 — dict kết quả lặp gần như nguyên văn ===
+Dict trong yield của parse_document (~dòng 229-254) và trong _catalog_fallback (~dòng 263-291) lặp
+lại gần như y hệt phần lớn field (so_ky_hieu, ngay_ban_hanh, loai_van_ban, ngay_co_hieu_luc,
+ngay_het_hieu_luc, ngay_dang_cong_bao, nganh, pham_vi ternary, tinh_trang_hieu_luc), chỉ khác ở
+linh_vuc/chuc_danh/nguoi_ky/content/relationships/crawl_status.
+Sửa: rút ra 1 hàm helper dùng chung cho phần field trùng nhau, 2 nơi gọi hàm đó rồi override/bổ sung
+phần khác biệt. Không đổi hành vi/giá trị output ở cả 2 nhánh — chỉ loại trùng lặp code, giữ nguyên
+kết quả.
+
+=== 9. crawler/clean_dataset.py:205 — NFC normalize 2 lần ===
+Dòng 205 normalize NFC cả cột content_html, rồi clean_html_to_text (dòng 56) normalize NFC lại lần
+nữa ngay từ đầu hàm. Sửa: bỏ lần normalize thừa — giữ lại normalize bên trong clean_html_to_text (vì
+hàm đó cần tự chuẩn hoá bất kể gọi từ đâu), còn dòng 205 chỉ cần coerce non-string thành "" mà KHÔNG
+normalize (vì việc normalize sẽ được clean_html_to_text làm lại ngay sau). Kiểm tra kỹ: cột
+content_html gốc (chưa qua clean_html_to_text) có được dùng/lưu ở đâu khác sau dòng 205 mà cần bản đã
+normalize không — nếu có, giữ nguyên hành vi ở chỗ đó, chỉ bỏ trùng lặp khi an toàn.
+
+=== Sau khi sửa xong toàn bộ 9 mục ===
+1. python -m py_compile crawler\clean_dataset.py crawler\upsert_dataset.py crawler\build_full_dataset.py crawler\vbpl\middlewares.py crawler\vbpl\spiders\vbpl.py
+2. Trong thư mục crawler/: `uv run pytest -q` (chạy toàn bộ test suite hiện có + test mới thêm ở
+   mục 5) — phải pass hết, không được có test nào fail.
+3. Viết 1 script Python nhỏ (không cần giữ lại, chỉ chạy 1 lần) tự import spiders/vbpl.py các hàm/
+   class liên quan để verify TRỰC TIẾP hành vi đã sửa cho mục 2 và 3 (vd giả lập item id=None qua
+   _request_if_new xem có bị chặn đúng không; giả lập response lỗi HTTP có meta đúng không) — báo
+   cáo kết quả thật, đừng chỉ đọc code rồi khẳng định đã đúng.
+4. Với mục 1 (middlewares exception drop), giải thích rõ cách đã chọn để không mất request âm thầm
+   nữa, kèm bằng chứng cụ thể (đọc lại code đã sửa và trace luồng, hoặc viết mini-test nếu khả thi).
+5. In ra danh sách file đã sửa, và với mỗi mục 1-9 báo PASS/thông tin xác nhận tương ứng. Nếu mục nào
+   không tự tin sửa an toàn được, BÁO LẠI CHO TÔI thay vì đoán — đặc biệt lưu ý mục 6 (dependency) cần
+   uv add thực sự chạy được, và mục 8 (refactor) không được đổi giá trị output.
+
+Ràng buộc: không sửa gì ngoài phạm vi 9 mục trên. Không thêm comment giải thích code làm gì (chỉ
+comment khi có lý do không hiển nhiên). KHÔNG chạy crawl thật (không gọi request tới vbpl.vn qua
+mạng) — chỉ test/verify bằng code nội bộ.

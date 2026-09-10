@@ -1,0 +1,52 @@
+Bối cảnh: Đây là pipeline xử lý văn bản pháp luật Việt Nam (DuckDB, files/vbpl_store.py = schema + upsert logic, files/vbpl_extract.py = parser tách Chương/Điều/Khoản/Điểm + trích xuất citations/amendments, files/ingest_parquet_sample.py = script ingest sample 200 doc).
+
+Vấn đề đã xác minh trên legal_sample_200.duckdb (200 documents):
+- Bảng `citations` có cột `resolved_doc_id` nhưng KHÔNG có code nào điền giá trị này — 100% NULL.
+- Bảng `amendments` có cột `resolved_target_provision_id` nhưng cũng 100% NULL.
+- Bảng `document_edges` có cột `resolved` (boolean) nhưng luôn là false — 0/8837 rows resolved.
+- `documents.so_ky_hieu` KHÔNG PHẢI khóa duy nhất: trong 200 doc mẫu đã có 7 giá trị trùng
+  (vd '08/2026/QĐ-UBND' xuất hiện 2 lần, '09/2026/QĐ-UBND' xuất hiện 3 lần) vì các tỉnh khác
+  nhau tái sử dụng cùng số hiệu văn bản. Resolve chỉ bằng so_ky_hieu sẽ có rủi ro nhận NHẦM
+  văn bản của tỉnh khác — nguy hiểm hơn cả việc không resolve được, vì tạo ra trích dẫn sai
+  mà hệ thống tưởng là đúng.
+
+Yêu cầu: Viết một resolution pass để điền các cột resolved_* nói trên, chạy sau khi ingest
+một batch document (gọi từ files/ingest_parquet_sample.py sau vòng lặp upsert, hoặc như một
+hàm riêng trong files/vbpl_store.py mà ingest_parquet_sample.py gọi cuối cùng).
+
+Logic resolve, theo thứ tự ưu tiên, AN TOÀN hơn là ĐẦY ĐỦ:
+1. Chuẩn hoá so_ky_hieu ở cả hai phía trước khi so khớp (trim, bỏ khoảng trắng thừa; các cột
+   target_so_ky_hieu trong citations/amendments/document_edges có thể có định dạng hơi khác
+   so_ky_hieu gốc — kiểm tra dữ liệu thật trước khi viết regex chuẩn hoá, đừng đoán).
+2. Với mỗi target_so_ky_hieu, tìm các document ứng viên trong bảng `documents` có so_ky_hieu
+   khớp (sau chuẩn hoá).
+3. Nếu đúng 1 ứng viên -> resolve thẳng (set resolved_doc_id / resolved=true / target_doc_id).
+4. Nếu nhiều ứng viên (do trùng số hiệu giữa các tỉnh) -> thử thu hẹp bằng co_quan_ban_hanh
+   hoặc scope (nếu có evidence_text/raw chứa tên cơ quan/tỉnh liên quan) hoặc bằng loai_van_ban.
+   Nếu sau khi thu hẹp còn > 1 ứng viên hoặc = 0 ứng viên -> để resolved=false / resolved_doc_id
+   NULL, KHÔNG được đoán bừa 1 trong các ứng viên. Việc để unresolved là chấp nhận được, resolve
+   sai thì không.
+5. Sau khi resolve được document, nếu amendment/citation có target_dieu/target_khoan/target_diem,
+   thử tìm provisions.provision_id tương ứng trong document đã resolve (path dạng ci.d{dieu}.k{khoan}
+   ... — xem cách provision_id/path được sinh ra trong vbpl_extract.py để biết định dạng chính xác,
+   đừng đoán). Nếu tìm được -> set resolved_provision_id / resolved_target_provision_id /
+   target_provision_id tương ứng. Nếu không tìm thấy điều/khoản đó trong cây (VD điều đã bị xoá,
+   parse thiếu) -> để NULL, không lỗi cứng (log lại số lượng miss để báo cáo).
+
+Sau khi cài đặt xong:
+1. python -m py_compile files\vbpl_extract.py files\vbpl_store.py files\ingest_parquet_sample.py
+2. Chạy lại: python -u files\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite
+3. Chạy: python files\validate_parse_invariants.py --db legal_sample_200.duckdb --expected-docs 200
+   (audit hiện tại phải vẫn PASS=27 WARN=0 FAIL=0, đừng làm hỏng invariant nào đang có)
+4. In ra thống kê: tổng số citations/amendments/document_edges, số đã resolved, số unresolved
+   do trùng số hiệu (ambiguous) vs không tìm thấy document nào (not_found), và vài ví dụ
+   ambiguous thực tế (so_ky_hieu bị trùng + tên các co_quan khác nhau) để tôi review.
+
+Ràng buộc:
+- KHÔNG sửa cấu trúc bảng hiện có trừ khi bắt buộc (cột resolved_* đã tồn tại sẵn trong DuckDB
+  schema ở files/vbpl_store.py, dùng nó).
+- KHÔNG được để lộ giả định sai: nếu dữ liệu thật cho thấy giả định của tôi ở trên (VD định dạng
+  provision_id) không đúng, hãy làm theo dữ liệu thật, không theo mô tả này.
+- Không thêm code không dùng, không thêm comment thừa giải thích code làm gì (chỉ comment khi có
+  lý do không hiển nhiên, WHY chứ không phải WHAT).
+- Cuối cùng in ra danh sách các file đã sửa.

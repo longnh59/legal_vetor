@@ -1,0 +1,1548 @@
+2026-08-25T02:46:55.844125Z ERROR codex_models_manager::cache: failed to load models cache: missing field `base_instructions` at line 97 column 5
+OpenAI Codex v0.146.0
+--------
+workdir: d:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a036d0-4efc-73f1-9497-628a3d27e986
+--------
+user
+Bối cảnh: Bạn vừa thêm hàm resolve_references() vào files/vbpl_store.py để điền resolved_doc_id/
+resolved_provision_id cho citations/amendments/document_edges. Tôi (reviewer) vừa xác minh trực
+tiếp trên DB và phát hiện bảng `citations` là DEAD SCHEMA từ trước khi bạn đụng vào:
+
+- files/vbpl_extract.py:992-993 cho thấy extract_citations() KHÔNG bao giờ được insert vào bảng
+  `citations` — dữ liệu của nó được convert thẳng thành document_edges rows (relation_type=
+  INLINE_CITATION khi kind=='doc', INTERNAL_REFERENCE khi kind=='provision').
+- Không có bất kỳ `INSERT INTO citations` nào trong toàn bộ files/vbpl_store.py.
+- Bảng `citations` chỉ được DELETE (dọn rác khi re-ingest) và giờ có thêm code resolve của bạn,
+  nhưng không có gì insert vào nó -> mãi mãi 0 dòng -> code resolve cho citations là vô nghĩa.
+- document_edges đã có đầy đủ và tốt hơn những gì citations định làm: resolved (bool),
+  target_doc_id, target_provision_id, source_method, confidence, evidence_span.
+
+Việc cần làm — DỌN BỎ bảng citations vì nó bị thay thế hoàn toàn bởi document_edges (không sửa
+lại thành có insert, vì sẽ tạo ra 2 nơi lưu cùng một fact — không cần thiết):
+
+1. files/vbpl_store.py:
+   - Bỏ `CREATE TABLE IF NOT EXISTS citations (...)` khỏi DDL.
+   - Bỏ entry "citations" khỏi _REF_TABLES trong resolve_references().
+   - Bỏ dòng xử lý citations trong vòng lặp DELETE khi re-ingest (dòng có
+     `("appendix_table_rows", "doc_id"), ("citations", "src_provision_id")` và nhánh
+     `if col == "src_provision_id"`).
+   - Sửa comment dòng 7 (không còn liệt kê citations trong SILVER layer).
+2. files/schema_postgres.sql: bỏ `CREATE TABLE citations (...)` và 2 index của nó. Sửa ví dụ
+   truy vấn ở cuối file (dùng document_edges thay vì citations, giữ đúng tinh thần ví dụ cũ:
+   "Impact analysis: sửa Điều 9 TT 200 thì ảnh hưởng ai?").
+3. files/import_duckdb_to_postgres.py: bỏ "citations" khỏi danh sách bảng được copy sang Postgres
+   (dòng có `amendments, citations, provision_versions, provisions,`).
+4. files/ingest_parquet_sample.py: bỏ "citations" khỏi 2 chỗ — vòng lặp in resolution stats
+   (`for table in ["citations", "amendments", "document_edges"]`) và danh sách bảng in count cuối
+   script.
+5. files/vbpl_extract.py: comment dòng 11 hiện liệt kê "citations" như một fact type sản phẩm ra —
+   giữ nguyên comment đó (extract_citations() vẫn tồn tại và feed document_edges, không xoá hàm),
+   nhưng nếu có comment nào khác ngụ ý citations là một BẢNG lưu trữ riêng thì sửa cho khớp thực tế
+   (nó chỉ là bước trung gian nạp vào document_edges).
+
+Sau khi sửa xong:
+1. python -m py_compile files\vbpl_extract.py files\vbpl_store.py files\ingest_parquet_sample.py files\import_duckdb_to_postgres.py
+2. python -u files\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite
+3. python files\validate_parse_invariants.py --db legal_sample_200.duckdb --expected-docs 200
+   (phải vẫn PASS=27 WARN=0 FAIL=0)
+4. In lại thống kê resolution cho amendments/document_edges (không còn citations trong output).
+5. Kiểm tra: `select count(*) from information_schema.tables where table_name='citations'` trên
+   DuckDB phải trả về 0 (bảng không còn tồn tại).
+
+Ràng buộc: không sửa gì khác ngoài phạm vi trên. Không thêm comment giải thích code làm gì. In ra
+danh sách file đã sửa ở cuối.
+
+codex
+Tôi sẽ kiểm tra đúng các điểm bạn nêu trước, rồi chỉnh rất hẹp trong các file liên quan và chạy đủ bộ lệnh xác minh.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'rg -n "citations|_REF_TABLES|CREATE TABLE IF NOT EXISTS citations|CREATE TABLE citations|Impact analysis|resolution stats|for table in|appendix_table_rows|src_provision_id|SILVER" files/vbpl_store.py files/schema_postgres.sql files/import_duckdb_to_postgres.py files/ingest_parquet_sample.py files/vbpl_extract.py' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 366ms:
+?? .round_backup/
+?? ORCHESTRATION.md
+?? PLAN.md
+?? Ra_soat_blueprint_extracted.txt
+?? Ra_soat_blueprint_vi.md
+?? crawler/
+?? crawler_test_raw.jsonl
+?? docker-compose.postgres.yml
+?? files/
+?? index.html
+?? legal.duckdb
+?? legal_sample_200.duckdb
+warning: unable to access 'C:\Users\ngann/.config/git/ignore': Permission denied
+warning: unable to access 'C:\Users\ngann/.config/git/ignore': Permission denied
+
+ succeeded in 375ms:
+files/ingest_parquet_sample.py:80:        for table in ["citations", "amendments", "document_edges"]:
+files/ingest_parquet_sample.py:92:        for table in [
+files/ingest_parquet_sample.py:101:            "citations",
+files/vbpl_extract.py:11:  6. facts       — citations, amendment_ops, definitions, effective_dates
+files/vbpl_extract.py:713:def extract_citations(text: str) -> List[Dict[str, Any]]:
+files/vbpl_extract.py:929:    for table in by_ord.values():
+files/vbpl_extract.py:954:        "src_provision_id": kw.get("src_provision_id"),
+files/vbpl_extract.py:992:        for c in extract_citations(text):
+files/vbpl_extract.py:996:                src_part_id=p.get("part_id"), src_provision_id=pid,
+files/vbpl_extract.py:1008:                src_part_id=p.get("part_id"), src_provision_id=pid,
+files/vbpl_extract.py:1027:        key = (e["relation_type"], e.get("src_provision_id"), e.get("src_part_id"),
+files/vbpl_extract.py:1275:        "citations": extract_citations(body_text),
+files/import_duckdb_to_postgres.py:87:              appendix_table_rows, appendix_tables, appendix_blocks,
+files/import_duckdb_to_postgres.py:89:              amendments, citations, provision_versions, provisions,
+files/import_duckdb_to_postgres.py:389:              (src_doc_id, src_provision_id, op, target_so_ky_hieu, target_dieu,
+files/import_duckdb_to_postgres.py:397:                    r["src_provision_id"] if r["src_provision_id"] in provision_ids else None,
+files/import_duckdb_to_postgres.py:436:              (relation_type, src_doc_id, src_part_id, src_provision_id,
+files/import_duckdb_to_postgres.py:447:                    r["src_provision_id"] if r["src_provision_id"] in provision_ids else None,
+files/import_duckdb_to_postgres.py:539:            INSERT INTO appendix_table_rows
+files/import_duckdb_to_postgres.py:555:                for r in rows(duck, "appendix_table_rows")
+files/import_duckdb_to_postgres.py:686:                UNION ALL SELECT 'appendix_table_rows', count(1) FROM appendix_table_rows
+files/vbpl_store.py:7:  SILVER  documents / provisions / citations / amendments / definitions
+files/vbpl_store.py:202:CREATE TABLE IF NOT EXISTS citations (
+files/vbpl_store.py:203:    src_provision_id VARCHAR,
+files/vbpl_store.py:219:    src_provision_id VARCHAR,
+files/vbpl_store.py:238:    src_provision_id VARCHAR,
+files/vbpl_store.py:299:CREATE TABLE IF NOT EXISTS appendix_table_rows (
+files/vbpl_store.py:712:    LEFT JOIN appendix_table_rows r
+files/vbpl_store.py:845:_REF_TABLES = {
+files/vbpl_store.py:846:    "citations": {
+files/vbpl_store.py:906:    for table, cfg in _REF_TABLES.items():
+files/vbpl_store.py:1152:                   ("appendix_table_rows", "doc_id"), ("citations", "src_provision_id")]:
+files/vbpl_store.py:1153:        if col == "src_provision_id":
+files/vbpl_store.py:1154:            con.execute("DELETE FROM citations WHERE src_provision_id LIKE ?", [f"{d}:%"])
+files/vbpl_store.py:1247:            (edge_id,relation_type,src_doc_id,src_part_id,src_provision_id,
+files/vbpl_store.py:1253:                     edge.get("src_part_id"), edge.get("src_provision_id"),
+files/vbpl_store.py:1283:    for table in parsed.get("appendix_tables", []):
+files/vbpl_store.py:1292:            con.execute("""INSERT INTO appendix_table_rows
+files/schema_postgres.sql:23:-- ---------- SILVER ----------
+files/schema_postgres.sql:591:  LEFT JOIN appendix_table_rows r
+files/schema_postgres.sql:735:CREATE TABLE citations (
+files/schema_postgres.sql:737:  src_provision_id text REFERENCES provisions ON DELETE CASCADE,
+files/schema_postgres.sql:746:CREATE INDEX ON citations (resolved_doc_id);
+files/schema_postgres.sql:747:CREATE INDEX ON citations (src_provision_id);
+files/schema_postgres.sql:752:  src_provision_id text,
+files/schema_postgres.sql:777:  src_provision_id text REFERENCES provisions ON DELETE CASCADE,
+files/schema_postgres.sql:796:CREATE INDEX ON document_edges (src_provision_id);
+files/schema_postgres.sql:855:CREATE TABLE appendix_table_rows (
+files/schema_postgres.sql:866:CREATE INDEX ON appendix_table_rows (doc_id, table_no, row_index);
+files/schema_postgres.sql:950:-- 4) Impact analysis: sửa Điều 9 TT 200 thì ảnh hưởng ai?
+files/schema_postgres.sql:951:--    SELECT DISTINCT c.src_provision_id FROM citations c
+
+codex
+Repo đang ở trạng thái nhiều file untracked nên tôi sẽ chỉ đụng các file bạn chỉ định. Bây giờ tôi đọc các đoạn DDL và cleanup quanh `citations` để patch đúng phạm vi.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\vbpl_store.py | Select-Object -Skip 1138 -First 30" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\vbpl_store.py | Select-Object -First 260" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\vbpl_store.py | Select-Object -Skip 830 -First 100" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\schema_postgres.sql | Select-Object -Skip 940 -First 25" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\ingest_parquet_sample.py | Select-Object -First 120" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\schema_postgres.sql | Select-Object -Skip 720 -First 90" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\import_duckdb_to_postgres.py | Select-Object -Skip 78 -First 18" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 429ms:
+
+
+def truncate_all(pg: psycopg.Connection) -> None:
+    with pg.cursor() as cur:
+        cur.execute(
+            """
+            TRUNCATE
+              chunks, parse_quality_reports, parse_coverage, footnotes,
+              appendix_table_rows, appendix_tables, appendix_blocks,
+              semantic_signals, definitions, document_edges,
+              amendments, citations, provision_versions, provisions,
+              preamble_items, document_outline_items, document_blocks,
+              document_lines, document_parts,
+              ingest_ledger, document_versions, documents, raw_docs
+            RESTART IDENTITY CASCADE
+            """
+        )
+
+
+ succeeded in 480ms:
+# -*- coding: utf-8 -*-
+from __future__ import annotations
+
+import argparse
+import glob
+import os
+import sys
+from pathlib import Path
+
+import pandas as pd
+
+from vbpl_extract import make_chunks, parse_document
+import vbpl_store
+
+
+def read_rows(root: Path, limit: int) -> pd.DataFrame:
+    meta_path = root / "metadata" / "data-00000-of-00001.parquet"
+    meta = pd.read_parquet(meta_path)
+
+    rows = []
+    wanted_ids = set(meta["id"].head(limit).astype("int64").tolist())
+    for content_path in sorted(glob.glob(str(root / "content" / "*.parquet"))):
+        content = pd.read_parquet(content_path, columns=["id", "content"])
+        hit = content[content["id"].isin(wanted_ids)]
+        if not hit.empty:
+            rows.append(hit)
+        found = sum(len(r) for r in rows)
+        if found >= limit:
+            break
+
+    if not rows:
+        raise RuntimeError("No content rows found")
+
+    content_df = pd.concat(rows, ignore_index=True).drop_duplicates("id")
+    sample_ids = meta["id"].head(limit)
+    sample = meta[meta["id"].isin(sample_ids)].merge(content_df, on="id", how="inner")
+    sample["_ord"] = sample["id"].map({doc_id: i for i, doc_id in enumerate(sample_ids)})
+    return sample.sort_values("_ord").drop(columns=["_ord"]).head(limit)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Ingest a parquet sample into DuckDB.")
+    parser.add_argument("--root", default=".", help="Dataset root directory")
+    parser.add_argument("--db", default="legal_sample_200.duckdb", help="Output DuckDB path")
+    parser.add_argument("--limit", type=int, default=200, help="Number of rows to ingest")
+    parser.add_argument("--overwrite", action="store_true", help="Remove output DB first")
+    args = parser.parse_args()
+
+    root = Path(args.root).resolve()
+    db_path = Path(args.db).resolve()
+    if args.overwrite and db_path.exists():
+        db_path.unlink()
+
+    rows = read_rows(root, args.limit)
+    con = vbpl_store.open_db(str(db_path))
+    try:
+        statuses = {}
+        for idx, row in enumerate(rows.itertuples(index=False), 1):
+            row_data = row._asdict()
+            doc_id = str(row.id)
+            text = row.content or ""
+            parsed = parse_document(text, doc_id=doc_id, metadata=row_data)
+            chunks = make_chunks(parsed)
+            result = vbpl_store.upsert(
+                con,
+                parsed,
+                chunks,
+                source="thuvienphapluat",
+                url=row.url,
+            )
+            statuses[result["status"]] = statuses.get(result["status"], 0) + 1
+            if idx == 1 or idx % 25 == 0 or idx == len(rows):
+                print(f"ingested {idx}/{len(rows)} latest={doc_id} status={result['status']}")
+
+        resolution_stats = vbpl_store.resolve_references(con)
+
+        print("\nDB:", db_path)
+        print("Statuses:", statuses)
+        print("\nResolution:")
+        for table in ["citations", "amendments", "document_edges"]:
+            s = resolution_stats[table]
+            print(
+                f"{table}: total={s['total']} resolved_docs={s['resolved_docs']} "
+                f"resolved_provisions={s['resolved_provisions']} ambiguous={s['ambiguous']} "
+                f"not_found={s['not_found']} no_target={s['no_target']} "
+                f"provision_miss={s['provision_miss']}"
+            )
+        if resolution_stats["ambiguous_examples"]:
+            print("Ambiguous examples:")
+            for so_ky_hieu, co_quan, n_candidates in resolution_stats["ambiguous_examples"]:
+                print(f"  {so_ky_hieu}: {n_candidates} candidates ({co_quan})")
+        for table in [
+            "documents",
+            "document_versions",
+            "raw_docs",
+            "document_lines",
+            "document_blocks",
+            "provisions",
+            "provision_versions",
+            "chunks",
+            "citations",
+            "amendments",
+            "document_edges",
+            "parse_quality_reports",
+        ]:
+            count = con.execute(f"SELECT count(1) FROM {table}").fetchone()[0]
+            print(f"{table}: {count}")
+
+        print("\nParse quality:")
+        print(con.execute("""
+            SELECT parse_status, count(1) AS n,
+                   min(coverage_ratio) AS min_coverage,
+                   avg(coverage_ratio) AS avg_coverage
+            FROM parse_quality_reports
+            GROUP BY parse_status
+            ORDER BY parse_status
+        """).fetchdf().to_string(index=False))
+    finally:
+        con.close()
+    return 0
+
+ succeeded in 482ms:
+  text_full     text,
+  is_current    boolean NOT NULL DEFAULT true,
+  effective_status text,
+  seen_from     timestamptz NOT NULL DEFAULT now(),
+  seen_to       timestamptz,
+  valid_from    date,
+  valid_to      date,
+  amended_by    text,                      -- so_ky_hieu cá»§a VB sá»­a Ä‘á»•i
+  UNIQUE (provision_key, valid_from)
+);
+CREATE INDEX ON provision_versions (provision_key, valid_from DESC);
+CREATE INDEX ON provision_versions (doc_id, version_no);
+CREATE INDEX ON provision_versions (provision_id, is_current);
+
+CREATE TABLE citations (
+  id bigserial PRIMARY KEY,
+  src_provision_id text REFERENCES provisions ON DELETE CASCADE,
+  kind text, target_so_ky_hieu text, target_dieu text,
+  target_khoan text, target_diem text,
+  resolved_doc_id text REFERENCES documents,
+  resolved_provision_id text,
+  raw text,
+  evidence_span int4range,
+  source_method text DEFAULT 'inline_citation'
+);
+CREATE INDEX ON citations (resolved_doc_id);
+CREATE INDEX ON citations (src_provision_id);
+
+CREATE TABLE amendments (
+  id bigserial PRIMARY KEY,
+  src_doc_id text REFERENCES documents ON DELETE CASCADE,
+  src_provision_id text,
+  op text CHECK (op IN ('AMEND','ADD','REPEAL','REPLACE','EXPIRE','SUSPEND')),
+  target_so_ky_hieu text, target_dieu text, target_khoan text, target_diem text,
+  resolved_target_provision_id text,
+  effective_date date,
+  replacement_text text,
+  evidence_text text,
+  evidence_span int4range
+);
+CREATE INDEX ON amendments (target_so_ky_hieu, target_dieu);
+
+-- Unified relation graph. Specialized tables above are extraction-friendly;
+-- this table is query-friendly for tracing all legal links.
+CREATE TABLE document_edges (
+  edge_id        bigserial PRIMARY KEY,
+  relation_type text NOT NULL CHECK (relation_type IN (
+                 'LEGAL_BASIS','INLINE_CITATION','INTERNAL_REFERENCE',
+                 'AMENDS','ADDS','REPEALS','REPLACES','EXPIRES','SUSPENDS',
+                 'GUIDES','DETAILS','IMPLEMENTS',
+                 'PROMULGATES','ATTACHED_TO',
+                 'CONSOLIDATES','INCORPORATES',
+                 'RELATED_BY_SECTOR','RELATED_BY_AUTHORITY',
+                 'RELATED_BY_TERM','RELATED_BY_TOPIC')),
+  src_doc_id     text NOT NULL REFERENCES documents ON DELETE CASCADE,
+  src_part_id    text REFERENCES document_parts ON DELETE CASCADE,
+  src_provision_id text REFERENCES provisions ON DELETE CASCADE,
+  target_doc_id  text REFERENCES documents,
+  target_part_id text REFERENCES document_parts,
+  target_provision_id text REFERENCES provisions,
+  target_so_ky_hieu text,
+  target_dieu    text,
+  target_khoan   text,
+  target_diem    text,
+  evidence_text  text,
+  evidence_span  int4range,
+  source_method  text NOT NULL,             -- legal_basis|inline_citation|amendment_clause|...
+  confidence     numeric(4,3) NOT NULL DEFAULT 1.0,
+  resolved       boolean NOT NULL DEFAULT false,
+  effective_date date,
+  created_at     timestamptz DEFAULT now()
+);
+CREATE INDEX ON document_edges (src_doc_id, relation_type);
+CREATE INDEX ON document_edges (target_doc_id, relation_type);
+CREATE INDEX ON document_edges (target_so_ky_hieu);
+CREATE INDEX ON document_edges (src_provision_id);
+CREATE INDEX ON document_edges (target_provision_id);
+CREATE INDEX ON document_edges (source_method, confidence DESC);
+
+CREATE TABLE definitions (
+  id bigserial PRIMARY KEY,
+  doc_id text REFERENCES documents ON DELETE CASCADE,
+  provision_id text,
+  term text, term_norm text, definition text
+);
+CREATE INDEX ON definitions USING gin (term_norm gin_trgm_ops);
+
+CREATE TABLE semantic_signals (
+  signal_id      bigserial PRIMARY KEY,
+  doc_id         text NOT NULL REFERENCES documents ON DELETE CASCADE,
+
+ succeeded in 485ms:
+    con.execute("DELETE FROM ingest_ledger WHERE doc_id=?", [d])
+    con.execute("""INSERT INTO ingest_ledger
+        (doc_id,source,source_url,metadata_hash,content_hash,current_version_no,
+         last_snapshot,status)
+        VALUES (?,?,?,?,?,?,?,?)""",
+                [d, source, url, metadata_hash, content_hash, version_no, now, status])
+
+    for t, col in [("document_parts", "doc_id"), ("document_outline_items", "doc_id"),
+                   ("preamble_items", "doc_id"),
+                   ("provisions", "doc_id"), ("chunks", "doc_id"),
+                   ("definitions", "doc_id"), ("amendments", "src_doc_id"),
+                   ("document_edges", "src_doc_id"), ("semantic_signals", "doc_id"),
+                   ("appendix_blocks", "doc_id"), ("appendix_tables", "doc_id"),
+                   ("appendix_table_rows", "doc_id"), ("citations", "src_provision_id")]:
+        if col == "src_provision_id":
+            con.execute("DELETE FROM citations WHERE src_provision_id LIKE ?", [f"{d}:%"])
+        else:
+            con.execute(f"DELETE FROM {t} WHERE {col}=?", [d])
+
+    parts = parsed.get("document_parts") or [{
+        "part_id": f"{d}:main",
+        "doc_id": d,
+        "parent_part_id": None,
+        "part_type": "main",
+        "title": h["trich_yeu"],
+        "attachment_label": None,
+        "path_prefix": "main",
+        "starts_at_ord": 0,
+        "ends_at_ord": None,
+        "raw_heading": None,
+
+ succeeded in 511ms:
+--    SELECT * FROM provisions WHERE doc_id=$1 AND path <@ 'ci.d3' ORDER BY ord;
+-- 2) Hybrid search cÃ³ lá»c hiá»‡u lá»±c:
+--    SELECT chunk_id, citation, 1-(embedding <=> $1) AS sim
+--    FROM chunks WHERE con_hieu_luc AND linh_vuc = $2
+--    ORDER BY embedding <=> $1 LIMIT 20;
+-- 3) Point-in-time: Ä‘iá»u luáº­t nÃ y nÃ³i gÃ¬ ngÃ y 2022-05-01?
+--    SELECT text_full FROM provision_versions
+--    WHERE provision_key=$1 AND valid_from <= DATE '2022-05-01'
+--      AND (valid_to IS NULL OR valid_to > DATE '2022-05-01');
+-- 4) Impact analysis: sá»­a Äiá»u 9 TT 200 thÃ¬ áº£nh hÆ°á»Ÿng ai?
+--    SELECT DISTINCT c.src_provision_id FROM citations c
+--    WHERE c.target_so_ky_hieu='200/2014/TT-BTC' AND c.target_dieu='9';
+-- 5) Trace all direct links from one document:
+--    SELECT relation_type, target_so_ky_hieu, target_dieu, evidence_text
+--    FROM document_edges WHERE src_doc_id=$1 ORDER BY confidence DESC;
+-- 6) Find documents that cite, amend, guide, or use the same inferred topic:
+--    SELECT * FROM document_edges
+--    WHERE target_doc_id=$1 OR src_doc_id=$1
+--    ORDER BY relation_type, confidence DESC;
+
+ succeeded in 513ms:
+# -*- coding: utf-8 -*-
+"""
+vbpl_store.py â€” Táº§ng lÆ°u trá»¯
+
+MÃ´ hÃ¬nh 3 lá»›p:
+  BRONZE  raw_html / raw_text  (báº¥t biáº¿n, cÃ³ content_hash â†’ phÃ¡t hiá»‡n VB sá»­a)
+  SILVER  documents / provisions / citations / amendments / definitions
+  GOLD    chunks (+ embedding) â†’ náº¡p vÃ o vector DB
+
+Local/analytics = DuckDB (file .duckdb, cháº¡y Parquet trá»±c tiáº¿p).
+Production/serving = Postgres + pgvector (DDL á»Ÿ schema_postgres.sql).
+"""
+import json
+from datetime import datetime, timezone
+import hashlib
+import duckdb
+
+DDL = """
+CREATE TABLE IF NOT EXISTS raw_docs (
+    doc_id          VARCHAR PRIMARY KEY,
+    source          VARCHAR,          -- vbpl.vn / thuvienphapluat / upload
+    source_url      VARCHAR,
+    fetched_at      TIMESTAMP,
+    content_hash    VARCHAR,          -- sha256 body -> diff giá»¯a 2 láº§n crawl
+    raw_body        VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS documents (
+    doc_id          VARCHAR PRIMARY KEY,
+    so_ky_hieu      VARCHAR,
+    loai_van_ban    VARCHAR,
+    co_quan         VARCHAR,
+    dia_danh        VARCHAR,
+    trich_yeu       VARCHAR,
+    ngay_ban_hanh   DATE,
+    ngay_hieu_luc   DATE,
+    ngay_het_hieu_luc DATE,
+    tinh_trang      VARCHAR,
+    linh_vuc        VARCHAR,
+    scope           VARCHAR,          -- trung_uong / dia_phuong
+    nguoi_ky        VARCHAR,
+    chuc_danh       VARCHAR,
+    parser_version  VARCHAR,
+    content_hash    VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS document_versions (
+    doc_id          VARCHAR,
+    version_no      INTEGER,
+    source          VARCHAR,
+    source_url      VARCHAR,
+    metadata_hash   VARCHAR,
+    content_hash    VARCHAR,
+    seen_from       TIMESTAMP,
+    seen_to         TIMESTAMP,
+    is_current      BOOLEAN,
+    change_status   VARCHAR,       -- NEW|META_CHANGED|CONTENT_CHANGED
+    so_ky_hieu      VARCHAR,
+    loai_van_ban    VARCHAR,
+    co_quan         VARCHAR,
+    dia_danh        VARCHAR,
+    trich_yeu       VARCHAR,
+    ngay_ban_hanh   DATE,
+    ngay_hieu_luc   DATE,
+    ngay_het_hieu_luc DATE,
+    tinh_trang      VARCHAR,
+    linh_vuc        VARCHAR,
+    scope           VARCHAR,
+    nguoi_ky        VARCHAR,
+    chuc_danh       VARCHAR,
+    raw_text        VARCHAR,
+    PRIMARY KEY (doc_id, version_no)
+);
+
+CREATE TABLE IF NOT EXISTS ingest_ledger (
+    doc_id          VARCHAR PRIMARY KEY,
+    source          VARCHAR,
+    source_url      VARCHAR,
+    metadata_hash   VARCHAR,
+    content_hash    VARCHAR,
+    current_version_no INTEGER,
+    last_snapshot   TIMESTAMP,
+    status          VARCHAR        -- NEW|META_CHANGED|CONTENT_CHANGED|UNCHANGED|MISSING
+);
+
+CREATE TABLE IF NOT EXISTS document_parts (
+    part_id          VARCHAR PRIMARY KEY,
+    doc_id           VARCHAR,
+    parent_part_id   VARCHAR,
+    part_type        VARCHAR,       -- main|attached_document|appendix|form|table|other
+    title            VARCHAR,
+    attachment_label VARCHAR,
+    path_prefix      VARCHAR,
+    starts_at_ord    INTEGER,
+    ends_at_ord      INTEGER,
+    raw_heading      VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS document_lines (
+    doc_id          VARCHAR,
+    version_no      INTEGER,
+    line_no         INTEGER,
+    section         VARCHAR,       -- header|body|footer|appendix|unknown
+    raw_text        VARCHAR,
+    normalized_text VARCHAR,
+    is_blank        BOOLEAN,
+    PRIMARY KEY (doc_id, version_no, line_no)
+);
+
+CREATE TABLE IF NOT EXISTS document_blocks (
+    block_id        VARCHAR,
+    doc_id          VARCHAR,
+    version_no      INTEGER,
+    part_id         VARCHAR,
+    block_type      VARCHAR,       -- header|body|footer|appendix
+    ord             INTEGER,
+    raw_text        VARCHAR,
+    normalized_text VARCHAR,
+    PRIMARY KEY (block_id, version_no)
+);
+
+CREATE TABLE IF NOT EXISTS document_outline_items (
+    outline_id      VARCHAR PRIMARY KEY,
+    doc_id          VARCHAR,
+    version_no      INTEGER,
+    section_ord     INTEGER,
+    item_ord        INTEGER,
+    section         VARCHAR,       -- header|preamble|body|footer|appendix
+    item_type       VARCHAR,       -- block|legal_basis|proposal|formula|provision|appendix_block
+    part_id         VARCHAR,
+    provision_id    VARCHAR,
+    parent_id       VARCHAR,
+    level           VARCHAR,
+    path            VARCHAR,
+    legal_path      VARCHAR,
+    source_context  VARCHAR,
+    quote_id        INTEGER,
+    number          VARCHAR,
+    heading         VARCHAR,
+    breadcrumb      VARCHAR,
+    line_start      INTEGER,
+    line_end        INTEGER,
+    text            VARCHAR,
+    text_full       VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS preamble_items (
+    id               BIGINT,
+    doc_id           VARCHAR,
+    item_type        VARCHAR,       -- legal_basis|proposal|promulgation_formula|other
+    ord              INTEGER,
+    raw_text         VARCHAR,
+    target_so_ky_hieu VARCHAR,
+    resolved_doc_id  VARCHAR,
+    evidence_start   INTEGER,
+    evidence_end     INTEGER
+);
+
+-- 1 dÃ²ng = 1 Ä‘Æ¡n vá»‹ quy pháº¡m. path lÃ  materialized path -> truy váº¥n cÃ¢y báº±ng LIKE.
+CREATE TABLE IF NOT EXISTS provisions (
+    provision_id    VARCHAR PRIMARY KEY,   -- "<doc_id>:ci.d3.k2.dma"
+    doc_id          VARCHAR,
+    part_id         VARCHAR,
+    parent_id       VARCHAR,
+    path            VARCHAR,
+    legal_path      VARCHAR,
+    source_context  VARCHAR,
+    quote_id        INTEGER,
+    level           VARCHAR,               -- phan|chuong|muc|tieu_muc|dieu|khoan|diem|tiet
+    legal_role      VARCHAR,
+    number          VARCHAR,
+    heading         VARCHAR,
+    breadcrumb      VARCHAR,               -- "ChÆ°Æ¡ng I > Äiá»u 3. Giáº£i thÃ­ch tá»« ngá»¯ > Khoáº£n 2"
+    depth           INTEGER,
+    ord             INTEGER,               -- thá»© tá»± xuáº¥t hiá»‡n, Ä‘á»ƒ Ä‘á»c tuáº§n tá»±
+    line_start      INTEGER,
+    line_end        INTEGER,
+    text            VARCHAR,               -- text riÃªng cá»§a node
+    text_full       VARCHAR,               -- text + toÃ n bá»™ con (cÃ¡i Ä‘em Ä‘i embed)
+    valid_from      DATE,                  -- point-in-time: Ä‘iá»u luáº­t nÃ y cÃ³ hiá»‡u lá»±c tá»«...
+    valid_to        DATE                   -- ...Ä‘áº¿n khi bá»‹ sá»­a/bÃ£i bá» (NULL = cÃ²n hiá»‡u lá»±c)
+);
+
+CREATE TABLE IF NOT EXISTS provision_versions (
+    provision_version_id VARCHAR PRIMARY KEY,
+    provision_id    VARCHAR,
+    doc_id          VARCHAR,
+    version_no      INTEGER,
+    legal_path      VARCHAR,
+    source_context  VARCHAR,
+    quote_id        INTEGER,
+    text            VARCHAR,
+    text_full       VARCHAR,
+    is_current      BOOLEAN,
+    effective_status VARCHAR,
+    valid_from      DATE,
+    valid_to        DATE,
+    seen_from       TIMESTAMP,
+    seen_to         TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS citations (
+    src_provision_id VARCHAR,
+    kind             VARCHAR,      -- doc | provision
+    target_so_ky_hieu VARCHAR,
+    target_dieu      VARCHAR,
+    target_khoan     VARCHAR,
+    target_diem      VARCHAR,
+    resolved_doc_id  VARCHAR,      -- Ä‘iá»n sau khi join vá»›i documents.so_ky_hieu
+    resolved_provision_id VARCHAR,
+    raw              VARCHAR,
+    evidence_start   INTEGER,
+    evidence_end     INTEGER,
+    source_method    VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS amendments (
+    src_doc_id       VARCHAR,
+    src_provision_id VARCHAR,
+    op               VARCHAR,      -- AMEND | ADD | REPEAL | REPLACE | EXPIRE | SUSPEND
+    target_so_ky_hieu VARCHAR,
+    target_dieu      VARCHAR,
+    target_khoan     VARCHAR,
+    target_diem      VARCHAR,
+    resolved_target_provision_id VARCHAR,
+    effective_date   DATE,
+    replacement_text VARCHAR,
+    evidence_text    VARCHAR,
+    evidence_start   INTEGER,
+    evidence_end     INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS document_edges (
+    edge_id          BIGINT,
+    relation_type    VARCHAR,      -- LEGAL_BASIS|INLINE_CITATION|AMENDS|GUIDES|RELATED_BY_TOPIC|...
+    src_doc_id       VARCHAR,
+    src_part_id      VARCHAR,
+    src_provision_id VARCHAR,
+    target_doc_id    VARCHAR,
+    target_part_id   VARCHAR,
+    target_provision_id VARCHAR,
+    target_so_ky_hieu VARCHAR,
+    target_dieu      VARCHAR,
+    target_khoan     VARCHAR,
+    target_diem      VARCHAR,
+    evidence_text    VARCHAR,
+    evidence_start   INTEGER,
+    evidence_end     INTEGER,
+    source_method    VARCHAR,
+    confidence       DOUBLE,
+    resolved         BOOLEAN,
+    effective_date   DATE
+);
+
+CREATE TABLE IF NOT EXISTS definitions (
+    doc_id           VARCHAR,
+    provision_id     VARCHAR,
+    term             VARCHAR,
+    definition       VARCHAR
+);
+
+ succeeded in 532ms:
+
+
+def open_db(path: str = "vbpl.duckdb"):
+    con = duckdb.connect(path)
+    con.execute(DDL)
+    return con
+
+
+def _stable_hash(value):
+    return hashlib.sha256(json.dumps(
+        value, ensure_ascii=False, sort_keys=True, default=str
+    ).encode("utf-8")).hexdigest()
+
+
+_REF_TABLES = {
+    "citations": {
+        "evidence": "raw",
+        "doc_col": "resolved_doc_id",
+        "provision_col": "resolved_provision_id",
+        "has_resolved_flag": False,
+    },
+    "amendments": {
+        "evidence": "evidence_text",
+        "doc_col": None,
+        "provision_col": "resolved_target_provision_id",
+        "has_resolved_flag": False,
+    },
+    "document_edges": {
+        "evidence": "evidence_text",
+        "doc_col": "target_doc_id",
+        "provision_col": "target_provision_id",
+        "has_resolved_flag": True,
+    },
+}
+
+
+def _norm_so_expr(col: str) -> str:
+    return (
+        "NULLIF(regexp_replace(upper(trim(replace(replace("
+        f"{col}, chr(160), ' '), chr(8203), ''))), '\\s+', ' ', 'g'), '')"
+    )
+
+
+def _norm_path_num_expr(col: str) -> str:
+    return f"lower(replace(trim({col}), '.', '_'))"
+
+
+def _make_provision_suffix_expr(alias: str) -> str:
+    dieu = _norm_path_num_expr(f"{alias}.target_dieu")
+    khoan = _norm_path_num_expr(f"{alias}.target_khoan")
+    diem = _norm_path_num_expr(f"{alias}.target_diem")
+    return f"""
+        'd' || {dieu}
+        || CASE WHEN {alias}.target_khoan IS NOT NULL
+                THEN '.k' || {khoan} ELSE '' END
+        || CASE WHEN {alias}.target_diem IS NOT NULL
+                THEN '.dm' || {diem} ELSE '' END
+    """
+
+
+def _fetch_scalar(con, sql: str):
+    return con.execute(sql).fetchone()[0]
+
+
+def resolve_references(con, ambiguous_examples_limit: int = 5):
+    doc_norm = _norm_so_expr("so_ky_hieu")
+    con.execute(f"""
+        CREATE OR REPLACE TEMP TABLE _resolve_doc_candidates AS
+        SELECT doc_id, so_ky_hieu, co_quan, dia_danh, loai_van_ban,
+               {doc_norm} AS so_norm
+        FROM documents
+        WHERE {doc_norm} IS NOT NULL
+    """)
+
+    stats = {}
+    for table, cfg in _REF_TABLES.items():
+        if cfg["doc_col"]:
+            con.execute(f"UPDATE {table} SET {cfg['doc_col']} = NULL")
+        if cfg["provision_col"]:
+            con.execute(f"UPDATE {table} SET {cfg['provision_col']} = NULL")
+        if cfg["has_resolved_flag"]:
+            con.execute(f"UPDATE {table} SET resolved = false")
+
+        target_norm = _norm_so_expr("target_so_ky_hieu")
+        evidence_col = cfg["evidence"]
+        con.execute(f"""
+            CREATE OR REPLACE TEMP TABLE _resolve_refs_{table} AS
+            SELECT rowid AS rid, target_so_ky_hieu, target_dieu, target_khoan,
+                   target_diem, {evidence_col} AS evidence_text,
+                   {target_norm} AS target_norm
+            FROM {table}
+        """)
+        con.execute(f"""
+            CREATE OR REPLACE TEMP TABLE _resolve_candidates_{table} AS
+            SELECT r.rid, d.doc_id, d.so_ky_hieu, d.co_quan, d.dia_danh,
+                   d.loai_van_ban, r.evidence_text,
+                   count(*) OVER (PARTITION BY r.rid) AS candidate_count
+            FROM _resolve_refs_{table} r
+            JOIN _resolve_doc_candidates d
+              ON d.so_norm = r.target_norm
+
+codex
+Tôi sẽ bỏ DDL và các điểm hiển thị/copy liên quan đến bảng `citations`, giữ nguyên luồng extract trung gian trong `vbpl_extract.py` vì hiện không có comment nào khác ngụ ý đó là bảng lưu riêng.
+2026-08-25T02:47:30.587295Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to read file to update D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\files\vbpl_store.py: fs sandbox helper failed with status exit code: 1: windows sandbox failed: helper_unknown_error: setup refresh had errors
+codex
+`apply_patch` bị lỗi sandbox khi mở file, nên tôi sẽ thực hiện cùng nội dung chỉnh sửa bằng PowerShell trong workspace và kiểm tra diff ngay sau đó.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+from pathlib import Path
+p = Path('files/vbpl_store.py')
+s = p.read_text(encoding='utf-8')
+s = s.replace('  SILVER  documents / provisions / citations / amendments / definitions', '  SILVER  documents / provisions / amendments / definitions')
+s = s.replace('''CREATE TABLE IF NOT EXISTS citations (\\n    src_provision_id VARCHAR,\\n    kind             VARCHAR,      -- doc | provision\\n    target_so_ky_hieu VARCHAR,\\n    target_dieu      VARCHAR,\\n    target_khoan     VARCHAR,\\n    target_diem      VARCHAR,\\n    resolved_doc_id  VARCHAR,      -- điền sau khi join với documents.so_ky_hieu\\n    resolved_provision_id VARCHAR,\\n    raw              VARCHAR,\\n    evidence_start   INTEGER,\\n    evidence_end     INTEGER,\\n    source_method    VARCHAR\\n);\\n\\n''', '')
+s = s.replace('''    \"citations\": {\\n        \"evidence\": \"raw\",\\n        \"doc_col\": \"resolved_doc_id\",\\n        \"provision_col\": \"resolved_provision_id\",\\n        \"has_resolved_flag\": False,\\n    },\\n''', '')
+s = s.replace('''                   (\"appendix_blocks\", \"doc_id\"), (\"appendix_tables\", \"doc_id\"),\\n                   (\"appendix_table_rows\", \"doc_id\"), (\"citations\", \"src_provision_id\")]:\\n        if col == \"src_provision_id\":\\n            con.execute(\"DELETE FROM citations WHERE src_provision_id LIKE ?\", [f\"{d}:%\"])\\n        else:\\n            con.execute(f\"DELETE FROM {t} WHERE {col}=?\", [d])\\n''', '''                   (\"appendix_blocks\", \"doc_id\"), (\"appendix_tables\", \"doc_id\"),\\n                   (\"appendix_table_rows\", \"doc_id\")]:\\n        con.execute(f\"DELETE FROM {t} WHERE {col}=?\", [d])\\n''')
+p.write_text(s, encoding='utf-8')
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 191ms:
+codex
+`vbpl_store.py` đã được chỉnh; tiếp theo tôi cập nhật schema Postgres và script sample/import, rồi sẽ dùng `rg` kiểm lại không còn tham chiếu bảng lưu trữ `citations`.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+from pathlib import Path
+p = Path('files/schema_postgres.sql')
+s = p.read_text(encoding='utf-8')
+s = s.replace('''CREATE TABLE citations (\\n  id bigserial PRIMARY KEY,\\n  src_provision_id text REFERENCES provisions ON DELETE CASCADE,\\n  kind text, target_so_ky_hieu text, target_dieu text,\\n  target_khoan text, target_diem text,\\n  resolved_doc_id text REFERENCES documents,\\n  resolved_provision_id text,\\n  raw text,\\n  evidence_span int4range,\\n  source_method text DEFAULT 'inline_citation'\\n);\\nCREATE INDEX ON citations (resolved_doc_id);\\nCREATE INDEX ON citations (src_provision_id);\\n\\n''', '')
+s = s.replace('''-- 4) Impact analysis: sửa Điều 9 TT 200 thì ảnh hưởng ai?\\n--    SELECT DISTINCT c.src_provision_id FROM citations c\\n--    WHERE c.target_so_ky_hieu='200/2014/TT-BTC' AND c.target_dieu='9';\\n''', '''-- 4) Impact analysis: sửa Điều 9 TT 200 thì ảnh hưởng ai?\\n--    SELECT DISTINCT e.src_provision_id FROM document_edges e\\n--    WHERE e.relation_type IN ('INLINE_CITATION','INTERNAL_REFERENCE')\\n--      AND e.target_so_ky_hieu='200/2014/TT-BTC' AND e.target_dieu='9';\\n''')
+p.write_text(s, encoding='utf-8')
+
+p = Path('files/import_duckdb_to_postgres.py')
+s = p.read_text(encoding='utf-8')
+s = s.replace('''              semantic_signals, definitions, document_edges,\\n              amendments, citations, provision_versions, provisions,\\n''', '''              semantic_signals, definitions, document_edges,\\n              amendments, provision_versions, provisions,\\n''')
+p.write_text(s, encoding='utf-8')
+
+p = Path('files/ingest_parquet_sample.py')
+s = p.read_text(encoding='utf-8')
+s = s.replace('for table in [\"citations\", \"amendments\", \"document_edges\"]:', 'for table in [\"amendments\", \"document_edges\"]:')
+s = s.replace('''            \"chunks\",\\n            \"citations\",\\n            \"amendments\",\\n''', '''            \"chunks\",\\n            \"amendments\",\\n''')
+p.write_text(s, encoding='utf-8')
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 167ms:
+2026-08-25T02:48:00.123369Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+Các thay đổi chính đã vào file. Tôi đang kiểm tra lại bằng tìm kiếm và diff để chắc không sót DDL, delete, copy list hay output stats cho bảng cũ.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg -n \"CREATE TABLE IF NOT EXISTS citations|CREATE TABLE citations|INSERT INTO citations|DELETE FROM citations|\\\"citations\\\"| citations,|FROM citations|ON citations|resolved_doc_id|resolved_provision_id|Impact analysis\" files/vbpl_store.py files/schema_postgres.sql files/import_duckdb_to_postgres.py files/ingest_parquet_sample.py files/vbpl_extract.py" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- files/vbpl_store.py files/schema_postgres.sql files/import_duckdb_to_postgres.py files/ingest_parquet_sample.py files/vbpl_extract.py' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T02:48:07.622462Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.3 seconds
+Output:
+rg: citations,|FROM: The filename, directory name, or volume label syntax is incorrect. (os error 123)
+rg: citations|ON: The filename, directory name, or volume label syntax is incorrect. (os error 123)
+rg: citations|resolved_doc_id|resolved_provision_id|Impact: The filename, directory name, or volume label syntax is incorrect. (os error 123)
+rg: analysis files/vbpl_store.py files/schema_postgres.sql files/import_duckdb_to_postgres.py files/ingest_parquet_sample.py files/vbpl_extract.py: The system cannot find the path specified. (os error 3)
+
+ exited 1 in 295ms:
+rg: citations,|FROM: The filename, directory name, or volume label syntax is incorrect. (os error 123)
+rg: citations|ON: The filename, directory name, or volume label syntax is incorrect. (os error 123)
+rg: citations|resolved_doc_id|resolved_provision_id|Impact: The filename, directory name, or volume label syntax is incorrect. (os error 123)
+rg: analysis files/vbpl_store.py files/schema_postgres.sql files/import_duckdb_to_postgres.py files/ingest_parquet_sample.py files/vbpl_extract.py: The system cannot find the path specified. (os error 3)
+
+ succeeded in 293ms:
+2026-08-25T02:48:07.840968Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+`git diff` không hiển thị vì thư mục `files/` đang untracked trong worktree này. Tôi sẽ dùng tìm kiếm nội dung và đọc các đoạn đã sửa thay cho diff.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\vbpl_store.py | Select-Object -Skip 190 -First 45" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\ingest_parquet_sample.py | Select-Object -Skip 74 -First 36" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg -n 'citations|resolved_doc_id|resolved_provision_id|Impact analysis' files\\vbpl_store.py files\\schema_postgres.sql files\\import_duckdb_to_postgres.py files\\ingest_parquet_sample.py files\\vbpl_extract.py" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\vbpl_store.py | Select-Object -Skip 840 -First 25" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\schema_postgres.sql | Select-Object -Skip 948 -First 10" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\vbpl_store.py | Select-Object -Skip 1148 -First 18" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\schema_postgres.sql | Select-Object -Skip 724 -First 55" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\import_duckdb_to_postgres.py | Select-Object -Skip 84 -First 10" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 719ms:
+files\vbpl_extract.py:11:  6. facts       — citations, amendment_ops, definitions, effective_dates
+files\vbpl_extract.py:713:def extract_citations(text: str) -> List[Dict[str, Any]]:
+files\vbpl_extract.py:992:        for c in extract_citations(text):
+files\vbpl_extract.py:1275:        "citations": extract_citations(body_text),
+files\import_duckdb_to_postgres.py:297:               resolved_doc_id, evidence_span)
+files\import_duckdb_to_postgres.py:307:                    r["resolved_doc_id"],
+files\vbpl_store.py:154:    resolved_doc_id  VARCHAR,
+files\vbpl_store.py:202:CREATE TABLE IF NOT EXISTS citations (
+files\vbpl_store.py:209:    resolved_doc_id  VARCHAR,      -- điền sau khi join với documents.so_ky_hieu
+files\vbpl_store.py:210:    resolved_provision_id VARCHAR,
+files\vbpl_store.py:1192:             resolved_doc_id,evidence_start,evidence_end)
+files\vbpl_store.py:1195:                     item.get("target_so_ky_hieu"), item.get("resolved_doc_id"),
+files\schema_postgres.sql:144:  resolved_doc_id text REFERENCES documents,
+files\schema_postgres.sql:148:CREATE INDEX ON preamble_items (resolved_doc_id);
+files\schema_postgres.sql:936:-- 4) Impact analysis: sửa Điều 9 TT 200 thì ảnh hưởng ai?
+files\schema_postgres.sql:937:--    SELECT DISTINCT c.src_provision_id FROM citations c
+
+ succeeded in 782ms:
+        resolution_stats = vbpl_store.resolve_references(con)
+
+        print("\nDB:", db_path)
+        print("Statuses:", statuses)
+        print("\nResolution:")
+        for table in ["amendments", "document_edges"]:
+            s = resolution_stats[table]
+            print(
+                f"{table}: total={s['total']} resolved_docs={s['resolved_docs']} "
+                f"resolved_provisions={s['resolved_provisions']} ambiguous={s['ambiguous']} "
+                f"not_found={s['not_found']} no_target={s['no_target']} "
+                f"provision_miss={s['provision_miss']}"
+            )
+        if resolution_stats["ambiguous_examples"]:
+            print("Ambiguous examples:")
+            for so_ky_hieu, co_quan, n_candidates in resolution_stats["ambiguous_examples"]:
+                print(f"  {so_ky_hieu}: {n_candidates} candidates ({co_quan})")
+        for table in [
+            "documents",
+            "document_versions",
+            "raw_docs",
+            "document_lines",
+            "document_blocks",
+            "provisions",
+            "provision_versions",
+            "chunks",
+            "amendments",
+            "document_edges",
+            "parse_quality_reports",
+        ]:
+            count = con.execute(f"SELECT count(1) FROM {table}").fetchone()[0]
+            print(f"{table}: {count}")
+
+        print("\nParse quality:")
+        print(con.execute("""
+            SELECT parse_status, count(1) AS n,
+
+ succeeded in 801ms:
+    quote_id        INTEGER,
+    text            VARCHAR,
+    text_full       VARCHAR,
+    is_current      BOOLEAN,
+    effective_status VARCHAR,
+    valid_from      DATE,
+    valid_to        DATE,
+    seen_from       TIMESTAMP,
+    seen_to         TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS citations (
+    src_provision_id VARCHAR,
+    kind             VARCHAR,      -- doc | provision
+    target_so_ky_hieu VARCHAR,
+    target_dieu      VARCHAR,
+    target_khoan     VARCHAR,
+    target_diem      VARCHAR,
+    resolved_doc_id  VARCHAR,      -- Ä‘iá»n sau khi join vá»›i documents.so_ky_hieu
+    resolved_provision_id VARCHAR,
+    raw              VARCHAR,
+    evidence_start   INTEGER,
+    evidence_end     INTEGER,
+    source_method    VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS amendments (
+    src_doc_id       VARCHAR,
+    src_provision_id VARCHAR,
+    op               VARCHAR,      -- AMEND | ADD | REPEAL | REPLACE | EXPIRE | SUSPEND
+    target_so_ky_hieu VARCHAR,
+    target_dieu      VARCHAR,
+    target_khoan     VARCHAR,
+    target_diem      VARCHAR,
+    resolved_target_provision_id VARCHAR,
+    effective_date   DATE,
+    replacement_text VARCHAR,
+    evidence_text    VARCHAR,
+    evidence_start   INTEGER,
+    evidence_end     INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS document_edges (
+    edge_id          BIGINT,
+    relation_type    VARCHAR,      -- LEGAL_BASIS|INLINE_CITATION|AMENDS|GUIDES|RELATED_BY_TOPIC|...
+
+ succeeded in 801ms:
+  seen_to       timestamptz,
+  valid_from    date,
+  valid_to      date,
+  amended_by    text,                      -- so_ky_hieu cá»§a VB sá»­a Ä‘á»•i
+  UNIQUE (provision_key, valid_from)
+);
+CREATE INDEX ON provision_versions (provision_key, valid_from DESC);
+CREATE INDEX ON provision_versions (doc_id, version_no);
+CREATE INDEX ON provision_versions (provision_id, is_current);
+
+CREATE TABLE amendments (
+  id bigserial PRIMARY KEY,
+  src_doc_id text REFERENCES documents ON DELETE CASCADE,
+  src_provision_id text,
+  op text CHECK (op IN ('AMEND','ADD','REPEAL','REPLACE','EXPIRE','SUSPEND')),
+  target_so_ky_hieu text, target_dieu text, target_khoan text, target_diem text,
+  resolved_target_provision_id text,
+  effective_date date,
+  replacement_text text,
+  evidence_text text,
+  evidence_span int4range
+);
+CREATE INDEX ON amendments (target_so_ky_hieu, target_dieu);
+
+-- Unified relation graph. Specialized tables above are extraction-friendly;
+-- this table is query-friendly for tracing all legal links.
+CREATE TABLE document_edges (
+  edge_id        bigserial PRIMARY KEY,
+  relation_type text NOT NULL CHECK (relation_type IN (
+                 'LEGAL_BASIS','INLINE_CITATION','INTERNAL_REFERENCE',
+                 'AMENDS','ADDS','REPEALS','REPLACES','EXPIRES','SUSPENDS',
+                 'GUIDES','DETAILS','IMPLEMENTS',
+                 'PROMULGATES','ATTACHED_TO',
+                 'CONSOLIDATES','INCORPORATES',
+                 'RELATED_BY_SECTOR','RELATED_BY_AUTHORITY',
+                 'RELATED_BY_TERM','RELATED_BY_TOPIC')),
+  src_doc_id     text NOT NULL REFERENCES documents ON DELETE CASCADE,
+  src_part_id    text REFERENCES document_parts ON DELETE CASCADE,
+  src_provision_id text REFERENCES provisions ON DELETE CASCADE,
+  target_doc_id  text REFERENCES documents,
+  target_part_id text REFERENCES document_parts,
+  target_provision_id text REFERENCES provisions,
+  target_so_ky_hieu text,
+  target_dieu    text,
+  target_khoan   text,
+  target_diem    text,
+  evidence_text  text,
+  evidence_span  int4range,
+  source_method  text NOT NULL,             -- legal_basis|inline_citation|amendment_clause|...
+  confidence     numeric(4,3) NOT NULL DEFAULT 1.0,
+  resolved       boolean NOT NULL DEFAULT false,
+  effective_date date,
+  created_at     timestamptz DEFAULT now()
+);
+CREATE INDEX ON document_edges (src_doc_id, relation_type);
+
+ succeeded in 820ms:
+    parts = parsed.get("document_parts") or [{
+        "part_id": f"{d}:main",
+        "doc_id": d,
+        "parent_part_id": None,
+        "part_type": "main",
+        "title": h["trich_yeu"],
+        "attachment_label": None,
+        "path_prefix": "main",
+        "starts_at_ord": 0,
+        "ends_at_ord": None,
+        "raw_heading": None,
+    }]
+    main_part_id = parts[0]["part_id"]
+    for part in parts:
+        con.execute("""INSERT INTO document_parts
+            (part_id,doc_id,parent_part_id,part_type,title,attachment_label,
+             path_prefix,starts_at_ord,ends_at_ord,raw_heading)
+            VALUES (?,?,?,?,?,?,?,?,?,?)""",
+
+ succeeded in 839ms:
+        value, ensure_ascii=False, sort_keys=True, default=str
+    ).encode("utf-8")).hexdigest()
+
+
+_REF_TABLES = {
+    "amendments": {
+        "evidence": "evidence_text",
+        "doc_col": None,
+        "provision_col": "resolved_target_provision_id",
+        "has_resolved_flag": False,
+    },
+    "document_edges": {
+        "evidence": "evidence_text",
+        "doc_col": "target_doc_id",
+        "provision_col": "target_provision_id",
+        "has_resolved_flag": True,
+    },
+}
+
+
+def _norm_so_expr(col: str) -> str:
+    return (
+        "NULLIF(regexp_replace(upper(trim(replace(replace("
+        f"{col}, chr(160), ' '), chr(8203), ''))), '\\s+', ' ', 'g'), '')"
+    )
+
+ succeeded in 834ms:
+            TRUNCATE
+              chunks, parse_quality_reports, parse_coverage, footnotes,
+              appendix_table_rows, appendix_tables, appendix_blocks,
+              semantic_signals, definitions, document_edges,
+              amendments, provision_versions, provisions,
+              preamble_items, document_outline_items, document_blocks,
+              document_lines, document_parts,
+              ingest_ledger, document_versions, documents, raw_docs
+            RESTART IDENTITY CASCADE
+            """
+
+ succeeded in 853ms:
+2026-08-25T02:48:23.429162Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+Tìm kiếm phát hiện DDL `citations` trong `vbpl_store.py` vẫn còn do đoạn comment bị encoding khác với chuỗi thay thế. Tôi sẽ xóa theo biên DDL thay vì khớp nguyên văn comment.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+from pathlib import Path
+import re
+
+p = Path('files/vbpl_store.py')
+s = p.read_text(encoding='utf-8')
+s = re.sub(r'CREATE TABLE IF NOT EXISTS citations \\(.*?\\);\\n\\n(?=CREATE TABLE IF NOT EXISTS amendments)', '', s, flags=re.S)
+p.write_text(s, encoding='utf-8')
+
+p = Path('files/schema_postgres.sql')
+s = p.read_text(encoding='utf-8')
+s = re.sub(r'-- 4\\) Impact analysis:.*?-- 5\\) Trace all direct links from one document:', \"-- 4) Impact analysis: sửa Điều 9 TT 200 thì ảnh hưởng ai?\\n--    SELECT DISTINCT e.src_provision_id FROM document_edges e\\n--    WHERE e.relation_type IN ('INLINE_CITATION','INTERNAL_REFERENCE')\\n--      AND e.target_so_ky_hieu='200/2014/TT-BTC' AND e.target_dieu='9';\\n-- 5) Trace all direct links from one document:\", s, flags=re.S)
+p.write_text(s, encoding='utf-8')
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 159ms:
+2026-08-25T02:48:33.147351Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+DDL cũ đã được xóa theo block. Tôi chạy lại kiểm tra nội dung để đảm bảo chỉ còn `citations` như fact trung gian trong extractor, đúng yêu cầu.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\vbpl_store.py | Select-Object -Skip 1138 -First 22" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\schema_postgres.sql | Select-Object -Skip 932 -First 14" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\vbpl_store.py | Select-Object -First 12" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg -n 'citations|resolved_doc_id|resolved_provision_id|Impact analysis' files\\vbpl_store.py files\\schema_postgres.sql files\\import_duckdb_to_postgres.py files\\ingest_parquet_sample.py files\\vbpl_extract.py" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 548ms:
+files\vbpl_extract.py:11:  6. facts       — citations, amendment_ops, definitions, effective_dates
+files\vbpl_extract.py:713:def extract_citations(text: str) -> List[Dict[str, Any]]:
+files\vbpl_extract.py:992:        for c in extract_citations(text):
+files\vbpl_extract.py:1275:        "citations": extract_citations(body_text),
+files\import_duckdb_to_postgres.py:297:               resolved_doc_id, evidence_span)
+files\import_duckdb_to_postgres.py:307:                    r["resolved_doc_id"],
+files\vbpl_store.py:154:    resolved_doc_id  VARCHAR,
+files\vbpl_store.py:1177:             resolved_doc_id,evidence_start,evidence_end)
+files\vbpl_store.py:1180:                     item.get("target_so_ky_hieu"), item.get("resolved_doc_id"),
+files\schema_postgres.sql:144:  resolved_doc_id text REFERENCES documents,
+files\schema_postgres.sql:148:CREATE INDEX ON preamble_items (resolved_doc_id);
+files\schema_postgres.sql:936:-- 4) Impact analysis: s?a ?i?u 9 TT 200 th? ?nh h??ng ai?
+
+ succeeded in 616ms:
+# -*- coding: utf-8 -*-
+"""
+vbpl_store.py â€” Táº§ng lÆ°u trá»¯
+
+MÃ´ hÃ¬nh 3 lá»›p:
+  BRONZE  raw_html / raw_text  (báº¥t biáº¿n, cÃ³ content_hash â†’ phÃ¡t hiá»‡n VB sá»­a)
+  SILVER  documents / provisions / amendments / definitions
+  GOLD    chunks (+ embedding) â†’ náº¡p vÃ o vector DB
+
+Local/analytics = DuckDB (file .duckdb, cháº¡y Parquet trá»±c tiáº¿p).
+Production/serving = Postgres + pgvector (DDL á»Ÿ schema_postgres.sql).
+"""
+
+ succeeded in 618ms:
+--    SELECT text_full FROM provision_versions
+--    WHERE provision_key=$1 AND valid_from <= DATE '2022-05-01'
+--      AND (valid_to IS NULL OR valid_to > DATE '2022-05-01');
+-- 4) Impact analysis: s?a ?i?u 9 TT 200 th? ?nh h??ng ai?
+--    SELECT DISTINCT e.src_provision_id FROM document_edges e
+--    WHERE e.relation_type IN ('INLINE_CITATION','INTERNAL_REFERENCE')
+--      AND e.target_so_ky_hieu='200/2014/TT-BTC' AND e.target_dieu='9';
+-- 5) Trace all direct links from one document:
+--    SELECT relation_type, target_so_ky_hieu, target_dieu, evidence_text
+--    FROM document_edges WHERE src_doc_id=$1 ORDER BY confidence DESC;
+-- 6) Find documents that cite, amend, guide, or use the same inferred topic:
+--    SELECT * FROM document_edges
+--    WHERE target_doc_id=$1 OR src_doc_id=$1
+--    ORDER BY relation_type, confidence DESC;
+
+ succeeded in 647ms:
+        "title": h["trich_yeu"],
+        "attachment_label": None,
+        "path_prefix": "main",
+        "starts_at_ord": 0,
+        "ends_at_ord": None,
+        "raw_heading": None,
+    }]
+    main_part_id = parts[0]["part_id"]
+    for part in parts:
+        con.execute("""INSERT INTO document_parts
+            (part_id,doc_id,parent_part_id,part_type,title,attachment_label,
+             path_prefix,starts_at_ord,ends_at_ord,raw_heading)
+            VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    [part["part_id"], part["doc_id"], part.get("parent_part_id"),
+                     part["part_type"], part.get("title"), part.get("attachment_label"),
+                     part.get("path_prefix"), part.get("starts_at_ord"),
+                     part.get("ends_at_ord"), part.get("raw_heading")])
+
+    for line in parsed.get("source_lines", []):
+        con.execute("""INSERT INTO document_lines
+            (doc_id,version_no,line_no,section,raw_text,normalized_text,is_blank)
+            VALUES (?,?,?,?,?,?,?)""",
+
+2026-08-25T02:48:42.052036Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+Các tham chiếu còn lại hiện là `preamble_items.resolved_doc_id` và extractor trung gian. Tôi đọc lại đoạn re-ingest cleanup để xác nhận nhánh `src_provision_id` đã mất, rồi chạy compile.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python -m py_compile files\\vbpl_extract.py files\\vbpl_store.py files\\ingest_parquet_sample.py files\\import_duckdb_to_postgres.py" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\vbpl_store.py | Select-Object -Skip 1128 -First 22" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 419ms:
+                   ("document_edges", "src_doc_id"), ("semantic_signals", "doc_id"),
+                   ("appendix_blocks", "doc_id"), ("appendix_tables", "doc_id"),
+                   ("appendix_table_rows", "doc_id")]:
+        con.execute(f"DELETE FROM {t} WHERE {col}=?", [d])
+
+    parts = parsed.get("document_parts") or [{
+        "part_id": f"{d}:main",
+        "doc_id": d,
+        "parent_part_id": None,
+        "part_type": "main",
+        "title": h["trich_yeu"],
+        "attachment_label": None,
+        "path_prefix": "main",
+        "starts_at_ord": 0,
+        "ends_at_ord": None,
+        "raw_heading": None,
+    }]
+    main_part_id = parts[0]["part_id"]
+    for part in parts:
+        con.execute("""INSERT INTO document_parts
+            (part_id,doc_id,parent_part_id,part_type,title,attachment_label,
+             path_prefix,starts_at_ord,ends_at_ord,raw_heading)
+
+ succeeded in 436ms:
+2026-08-25T02:48:48.089958Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+`py_compile` đã qua. Tôi bắt đầu ingest lại `legal_sample_200.duckdb` với `--overwrite`; bước này sẽ tạo DB mới nên cũng kiểm chứng DDL DuckDB không tạo bảng `citations`.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python -u files\\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T02:50:51.891588Z ERROR codex_core::tools::router: error=Exit code: 124
+Wall time: 120.2 seconds
+Output:
+command timed out after 120205 milliseconds
+ingested 1/200 latest=693036 status=NEW
+ingested 25/200 latest=680586 status=NEW
+ingested 50/200 latest=684205 status=NEW
+
+ exited 124 in 120205ms:
+ingested 1/200 latest=693036 status=NEW
+ingested 25/200 latest=680586 status=NEW
+ingested 50/200 latest=684205 status=NEW
+
+codex
+Ingest 200 dòng chưa xong trong 120 giây, đã tới 50/200. Tôi chạy lại với timeout dài hơn để lấy đủ output cuối, bao gồm resolution stats đã bỏ `citations`.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python -u files\\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T02:58:11.455806Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 435.4 seconds
+Output:
+ingested 1/200 latest=693036 status=NEW
+ingested 25/200 latest=680586 status=NEW
+ingested 50/200 latest=684205 status=NEW
+ingested 75/200 latest=692542 status=NEW
+ingested 100/200 latest=695444 status=NEW
+ingested 125/200 latest=694948 status=NEW
+ingested 150/200 latest=674286 status=NEW
+ingested 175/200 latest=694283 status=NEW
+ingested 200/200 latest=694325 status=NEW
+
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+Statuses: {'NEW': 200}
+
+Resolution:
+amendments: total=898 resolved_docs=7 resolved_provisions=0 ambiguous=0 not_found=247 no_target=644 provision_miss=1
+document_edges: total=8837 resolved_docs=39 resolved_provisions=0 ambiguous=3 not_found=2884 no_target=5911 provision_miss=0
+Ambiguous examples:
+Traceback (most recent call last):
+  File "D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\files\ingest_parquet_sample.py", line 123, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\files\ingest_parquet_sample.py", line 91, in main
+    print(f"  {so_ky_hieu}: {n_candidates} candidates ({co_quan})")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u0110' in position 14: character maps to <undefined>
+
+ exited 1 in 435371ms:
+ingested 1/200 latest=693036 status=NEW
+ingested 25/200 latest=680586 status=NEW
+ingested 50/200 latest=684205 status=NEW
+ingested 75/200 latest=692542 status=NEW
+ingested 100/200 latest=695444 status=NEW
+ingested 125/200 latest=694948 status=NEW
+ingested 150/200 latest=674286 status=NEW
+ingested 175/200 latest=694283 status=NEW
+ingested 200/200 latest=694325 status=NEW
+
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+Statuses: {'NEW': 200}
+
+Resolution:
+amendments: total=898 resolved_docs=7 resolved_provisions=0 ambiguous=0 not_found=247 no_target=644 provision_miss=1
+document_edges: total=8837 resolved_docs=39 resolved_provisions=0 ambiguous=3 not_found=2884 no_target=5911 provision_miss=0
+Ambiguous examples:
+Traceback (most recent call last):
+  File "D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\files\ingest_parquet_sample.py", line 123, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\files\ingest_parquet_sample.py", line 91, in main
+    print(f"  {so_ky_hieu}: {n_candidates} candidates ({co_quan})")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u0110' in position 14: character maps to <undefined>
+
+2026-08-25T02:58:11.507223Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+Ingest đã ingest đủ 200 và in được stats cho `amendments/document_edges`, nhưng process fail ở bước in “Ambiguous examples” do stdout Windows `cp1252` không encode được ký tự tiếng Việt. Tôi không sửa code ngoài phạm vi; tôi chạy lại cùng lệnh với `PYTHONIOENCODING=utf-8` để hoàn tất output.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; python -u files\\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 433669ms:
+ingested 1/200 latest=693036 status=NEW
+ingested 25/200 latest=680586 status=NEW
+ingested 50/200 latest=684205 status=NEW
+ingested 75/200 latest=692542 status=NEW
+ingested 100/200 latest=695444 status=NEW
+ingested 125/200 latest=694948 status=NEW
+ingested 150/200 latest=674286 status=NEW
+ingested 175/200 latest=694283 status=NEW
+ingested 200/200 latest=694325 status=NEW
+
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+Statuses: {'NEW': 200}
+
+Resolution:
+amendments: total=898 resolved_docs=7 resolved_provisions=0 ambiguous=0 not_found=247 no_target=644 provision_miss=1
+document_edges: total=8837 resolved_docs=39 resolved_provisions=0 ambiguous=3 not_found=2884 no_target=5911 provision_miss=0
+Ambiguous examples:
+  17/2025/NQ-HĐND: 2 candidates (Tỉnh Cao Bằng | Tỉnh Ninh Bình)
+documents: 200
+document_versions: 200
+raw_docs: 200
+document_lines: 60147
+document_blocks: 633
+provisions: 9300
+provision_versions: 9300
+chunks: 9541
+amendments: 898
+document_edges: 8837
+parse_quality_reports: 200
+
+Parse quality:
+parse_status   n  min_coverage  avg_coverage
+          ok 200           1.0           1.0
+
+codex
+Ingest chạy sạch với UTF-8 stdout và output resolution không còn `citations`. Tôi tiếp tục chạy invariant validation rồi query `information_schema.tables` để xác nhận bảng đã biến mất trong DuckDB.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; python files\\validate_parse_invariants.py --db legal_sample_200.duckdb --expected-docs 200" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python -c \"import duckdb; con=duckdb.connect('legal_sample_200.duckdb'); print(con.execute(\\\"select count(*) from information_schema.tables where table_name='citations'\\\").fetchone()[0]); con.close()\"" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T03:05:41.045670Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.4 seconds
+Output:
+* : The term '*' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the 
+spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:2 char:107
++ ... legal_sample_200.duckdb'); print(con.execute(\"select count(*) from i ...
++                                                                 ~
+    + CategoryInfo          : ObjectNotFound: (*:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+
+ exited 1 in 363ms:
+* : The term '*' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the 
+spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:2 char:107
++ ... legal_sample_200.duckdb'); print(con.execute(\"select count(*) from i ...
++                                                                 ~
+    + CategoryInfo          : ObjectNotFound: (*:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+
+ succeeded in 3904ms:
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+
+## Invariant checks
+[PASS] expected_doc_count: documents=200, expected=200
+[PASS] coverage_all_ok: reports=200, ok=200, min_coverage=1.0, max_orphans=0
+[PASS] coverage_has_every_source_line: line_count_mismatches=0
+[PASS] unique_storage_paths: duplicate_storage_path_groups=0
+[PASS] unique_own_legal_paths: duplicate_own_legal_path_groups=0
+[PASS] all_parent_refs_exist: missing_parent_refs=0
+[PASS] child_path_extends_parent_path: bad_parent_prefix=0
+[PASS] cross_context_parent_links_recorded: cross_context_parent_links=237
+[PASS] outline_refs_exist: missing_outline_refs=0
+[PASS] preamble_items_have_single_classification: duplicate_preamble_classifications=0
+[PASS] context_units_match_nonempty_provisions: context_units=9300, nonempty_provisions=9300
+[PASS] context_units_have_source_line_refs: missing_context_source_line_refs=0
+[PASS] context_source_line_refs_join_document_lines: invalid_context_source_line_refs=0
+[PASS] outline_context_units_match_nonempty_outline_items: outline_context_units=25849, nonempty_outline_items=25849
+[PASS] outline_context_units_have_source_line_refs: missing_outline_source_line_refs=0
+[PASS] outline_source_line_refs_join_document_lines: invalid_outline_source_line_refs=0
+[PASS] source_line_view_matches_document_lines: source_line_view_rows=60147, document_lines=60147
+[PASS] nonblank_source_lines_have_context: unmapped_nonblank_source_lines=0
+[PASS] table_context_units_cover_appendix_and_embedded_tables: table_context_units=451, expected=451
+[PASS] embedded_table_context_units_have_source_refs: embedded_tables_missing_source_refs=0
+[PASS] quote_context_is_consistent: bad_quote_rows=0
+[PASS] provision_line_ranges_valid: bad_line_ranges=0
+[PASS] appendix_tables_have_rows_and_columns: appendix_table_issues=0
+[PASS] chunk_refs_exist: missing_chunk_refs=0
+[PASS] retrieval_chunks_respect_size_limit: oversized_chunks=0
+[PASS] retrieval_chunks_cover_leaf_and_intro_units: missing_retrieval_chunks=0
+[PASS] quoted_targets_present: quoted_target_nodes=627
+
+## Summary
+PASS=27 WARN=0 FAIL=0
+
+codex
+Invariant validation đạt đúng `PASS=27 WARN=0 FAIL=0`. Query kiểm bảng bị lỗi do PowerShell nuốt dấu `*` trong chuỗi SQL, tôi chạy lại bằng here-string để tránh quoting issue.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import duckdb
+con = duckdb.connect('legal_sample_200.duckdb')
+print(con.execute(\"select count(*) from information_schema.tables where table_name='citations'\").fetchone()[0])
+con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 255ms:
+0
+
+codex
+Tôi đang làm bước rà cuối: chuẩn hóa comment ví dụ SQL mới để không đưa thêm lỗi encoding vào file, rồi kiểm tra lại toàn bộ `citations` còn lại chỉ nằm ở extractor trung gian.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+from pathlib import Path
+p = Path('files/schema_postgres.sql')
+s = p.read_text(encoding='utf-8')
+s = s.replace('-- 4) Impact analysis: s?a ?i?u 9 TT 200 th? ?nh h??ng ai?', '-- 4) Impact analysis: edit Dieu 9 TT 200 then who is affected?')
+p.write_text(s, encoding='utf-8')
+'@ | python -
+rg -n 'citations|CREATE TABLE IF NOT EXISTS citations|CREATE TABLE citations|DELETE FROM citations|INSERT INTO citations|ON citations|Impact analysis' files\\vbpl_store.py files\\schema_postgres.sql files\\import_duckdb_to_postgres.py files\\ingest_parquet_sample.py files\\vbpl_extract.py" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 196ms:
+files\vbpl_extract.py:11:  6. facts       — citations, amendment_ops, definitions, effective_dates
+files\vbpl_extract.py:713:def extract_citations(text: str) -> List[Dict[str, Any]]:
+files\vbpl_extract.py:992:        for c in extract_citations(text):
+files\vbpl_extract.py:1275:        "citations": extract_citations(body_text),
+files\schema_postgres.sql:936:-- 4) Impact analysis: edit Dieu 9 TT 200 then who is affected?
+
+2026-08-25T03:06:03.535027Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+Rà cuối cho thấy không còn DDL/DELETE/INSERT/index/copy/output stats cho bảng `citations`; các hit còn lại là fact trung gian trong `vbpl_extract.py`. Tôi kiểm tra file phát sinh từ compile để tránh để lại rác ngoài phạm vi.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\schema_postgres.sql | Select-Object -Skip 932 -First 9" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-ChildItem -Recurse -Directory -Filter __pycache__ files | Select-Object -ExpandProperty FullName' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\vbpl_store.py | Select-Object -Skip 188 -First 20" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 478ms:
+D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\files\__pycache__
+
+ succeeded in 478ms:
+    legal_path      VARCHAR,
+    source_context  VARCHAR,
+    quote_id        INTEGER,
+    text            VARCHAR,
+    text_full       VARCHAR,
+    is_current      BOOLEAN,
+    effective_status VARCHAR,
+    valid_from      DATE,
+    valid_to        DATE,
+    seen_from       TIMESTAMP,
+    seen_to         TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS amendments (
+    src_doc_id       VARCHAR,
+    src_provision_id VARCHAR,
+    op               VARCHAR,      -- AMEND | ADD | REPEAL | REPLACE | EXPIRE | SUSPEND
+    target_so_ky_hieu VARCHAR,
+    target_dieu      VARCHAR,
+    target_khoan     VARCHAR,
+
+ succeeded in 507ms:
+--    SELECT text_full FROM provision_versions
+--    WHERE provision_key=$1 AND valid_from <= DATE '2022-05-01'
+--      AND (valid_to IS NULL OR valid_to > DATE '2022-05-01');
+-- 4) Impact analysis: edit Dieu 9 TT 200 then who is affected?
+--    SELECT DISTINCT e.src_provision_id FROM document_edges e
+--    WHERE e.relation_type IN ('INLINE_CITATION','INTERNAL_REFERENCE')
+--      AND e.target_so_ky_hieu='200/2014/TT-BTC' AND e.target_dieu='9';
+-- 5) Trace all direct links from one document:
+--    SELECT relation_type, target_so_ky_hieu, target_dieu, evidence_text
+
+2026-08-25T03:06:10.941048Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+`py_compile` để lại `files/__pycache__`; đây là artifact sinh ra từ bước xác minh. Tôi sẽ xóa đúng thư mục đó trong workspace để không để lại thay đổi ngoài phạm vi.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$target = Resolve-Path -LiteralPath '"'files\\__pycache__'
+"'$root = Resolve-Path -LiteralPath '"'.'
+if ("'$target.Path.StartsWith($root.Path)) {
+  Remove-Item -LiteralPath $target.Path -Recurse -Force
+} else {
+  throw "Refusing to remove outside workspace: $($target.Path)"
+}' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 138ms:
+2026-08-25T03:06:17.259275Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+Đã dọn bảng `citations` theo phạm vi yêu cầu.
+
+File đã sửa:
+- `files/vbpl_store.py`
+- `files/schema_postgres.sql`
+- `files/import_duckdb_to_postgres.py`
+- `files/ingest_parquet_sample.py`
+
+Giữ nguyên `files/vbpl_extract.py`; các `citations` còn lại chỉ là fact trung gian feed vào `document_edges`.
+
+Đã chạy kiểm tra:
+- `python -m py_compile ...`: pass
+- `python -u files\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite`: pass khi rerun với `PYTHONIOENCODING=utf-8` do Windows stdout `cp1252` lỗi khi in tiếng Việt
+- Resolution output hiện chỉ còn:
+  - `amendments: total=898 resolved_docs=7 resolved_provisions=0 ambiguous=0 not_found=247 no_target=644 provision_miss=1`
+  - `document_edges: total=8837 resolved_docs=39 resolved_provisions=0 ambiguous=3 not_found=2884 no_target=5911 provision_miss=0`
+- `python files\validate_parse_invariants.py --db legal_sample_200.duckdb --expected-docs 200`: `PASS=27 WARN=0 FAIL=0`
+- DuckDB check: `select count(*) from information_schema.tables where table_name='citations'` trả về `0`
+tokens used
+50,852
+Đã dọn bảng `citations` theo phạm vi yêu cầu.
+
+File đã sửa:
+- `files/vbpl_store.py`
+- `files/schema_postgres.sql`
+- `files/import_duckdb_to_postgres.py`
+- `files/ingest_parquet_sample.py`
+
+Giữ nguyên `files/vbpl_extract.py`; các `citations` còn lại chỉ là fact trung gian feed vào `document_edges`.
+
+Đã chạy kiểm tra:
+- `python -m py_compile ...`: pass
+- `python -u files\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite`: pass khi rerun với `PYTHONIOENCODING=utf-8` do Windows stdout `cp1252` lỗi khi in tiếng Việt
+- Resolution output hiện chỉ còn:
+  - `amendments: total=898 resolved_docs=7 resolved_provisions=0 ambiguous=0 not_found=247 no_target=644 provision_miss=1`
+  - `document_edges: total=8837 resolved_docs=39 resolved_provisions=0 ambiguous=3 not_found=2884 no_target=5911 provision_miss=0`
+- `python files\validate_parse_invariants.py --db legal_sample_200.duckdb --expected-docs 200`: `PASS=27 WARN=0 FAIL=0`
+- DuckDB check: `select count(*) from information_schema.tables where table_name='citations'` trả về `0`

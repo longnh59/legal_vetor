@@ -1,0 +1,301 @@
+G O V E R N M E N T  L AW  A S S I S TA N T  ·  D E S I G N  D O C U M E N T
+Rà Soát Blueprint
+MVP architecture for a drafting assistant that checks proposed
+Vietnamese legal provisions against existing law — at the level of
+individual articles and clauses — over a continuously updated legal
+knowledge graph.
+Date 2026-08-23 Corpus vbpl.vn via HF · th1nhng0/vietnamese-legal-documents
+Status Approved for build
+§  D E C I S I O N S  LO C K E D
+M V P  S C O P E
+Full pipeline, thin slice
+Retrieval + graph expansion + LLM
+judgment, end-to-end, built minimally.
+C O R P U S
+Curated set — 171,556 docs
+Rich metadata (validity, doc type) +
+1,033,255-edge relationship graph.
+L L M  AC C ES S
+Frontier models via OpenRouter
+Pinned versions; ZDR / no-training provider
+routing for draft privacy.
+K N OW L E D G E  G R A P H
+Updatable by design
+Append-only, versioned, delta-driven
+ingestion. Update cost ∝  delta size.
+§  SYS T E M  O V E RV I E W
+Five stages, one report
+A lawyer submits a draft provision (or a whole draft document). The system
+decomposes it into clause-level queries and, for each clause, produces a cited
+compatibility report: which existing Đ i ề u/Kho ả n are relevant, whether each is
+conflicting, overlapping, or compatible, and how severe the finding is given the
+legal hierarchy. RAG is the backbone of one stage out of five.
+01 Decompose & filter
+8/23/26, 1:53 AM Rà Soát Blueprint
+https://claude.ai/code/artifact/6a12b4a8-ff99-4b92-8614-308c082a098b 1/7
+
+01 Decompose & filter
+Split the draft into its own Đ i ề u/Kho ả n; derive structured filters (sector, hierarchy
+level of the proposed document, validity = current only).
+02 Hybrid retrieval
+BM25 + dense embeddings (bge-m3) over article-level chunks, metadata-
+filtered, then cross-encoder reranking to top ~10 per clause.
+03 Graph expansion
+For each candidate article, traverse typed edges: amended-by / repealed-by (is
+this text current?), guided-by (pull implementing Thông t ư ), cites (one hop of
+context).
+04 Pairwise judgment
+Frontier LLM classifies each (draft clause, retrieved clause) pair: contradicts /
+duplicates-overlaps / compatible-related, with reasoning grounded in quoted
+text.
+05 Rules & report
+Deterministic hierarchy logic (lex superior / posterior / specialis per Lu ậ t Ban hành
+VBQPPL) ranks severity; composer emits the cited report for lawyer verification.
+Draft provision 1 · Decompose
++ filters
+2 · Hybrid retrieval
+BM25 + dense + rerank
+3 · Graph expansion
+amends / repeals / 
+guides
+4 · LLM pairwise
+judgment
+5 · Rules + severity
+→  cited report
+Legal knowledge graph
++ vector / BM25 index
+Query-time pipeline. The knowledge graph and search indexes are one transactional store
+(Postgres + pgvector), kept fresh by the update pipeline below.
+Product stance: every output is an assistive finding with exact citations
+(document →  ch ươ ng →  đ i ề u →  kho ả n) for the lawyer to verify — never an
+authoritative verdict. False negatives are the expensive error; the pipeline favors
+recall at retrieval and lets judgment + rules restore precision.
+§  DATA  M O D E L
+Graph schema
+8/23/26, 1:53 AM Rà Soát Blueprint
+https://claude.ai/code/artifact/6a12b4a8-ff99-4b92-8614-308c082a098b 2/7
+
+Graph schema
+Documents and articles are first-class nodes with stable identifiers; every
+mutable fact lives in a versioned row, never overwritten. Article IDs are
+deterministic ( {doc_id}:d5:k2  = Kho ả n 2, Đ i ề u 5) so edges, chunks, and citations
+survive re-ingestion.
+TABLE ROLE KEY FIELDS
+documents One row per
+document; identity
+only
+doc_id , so_ky_hieu , loai_van_ban ,
+hierarchy_rank
+document_versions Append-only
+metadata +
+content snapshots
+doc_id , version_no , tinh_trang_hieu_luc ,
+content_hash , seen_from / seen_to
+articles Đ i ề u/Kho ả n nodes
+with hierarchical
+path
+article_id , doc_id , path
+(ph ầ n/ch ươ ng/m ụ c/ đ i ề u/kho ả n/ đ i ể m)
+article_versions Parsed text per
+ingestion version
+article_id , version_no , text ,
+is_current , effective_status
+doc_relations Portal-curated
+edges (1.03M)
+doc_id , other_doc_id , relationship ,
+source='vbpl' , seen_from / seen_to
+article_relations Extracted article-
+level edges
+from_article , to_article , relation ,
+source='extracted' , model , confidence
+chunks Retrieval units =
+article versions
+chunk_id = article_version_id ,
+embedding , embedding_model , tsvector ,
+is_current
+ingest_ledger Delta detection
+state
+doc_id , metadata_hash , content_hash ,
+last_snapshot , status
+report_citations Which reports cite
+which article
+versions
+report_id , article_version_id , stale
+Two time axes are recorded and kept distinct: system time ( seen_from / seen_to
+— when our pipeline learned a fact) and legal time (ngày có hi ệ u l ự c / ngày h ế t
+hi ệ u l ự c — when the law is in force). The MVP queries "current law" only, but this
+bitemporal layout makes point-in-time queries ("what was in force in 2023?") a
+later feature not a re-architecture
+8/23/26, 1:53 AM Rà Soát Blueprint
+https://claude.ai/code/artifact/6a12b4a8-ff99-4b92-8614-308c082a098b 3/7
+
+later feature, not a re architecture.
+Article-level edge extraction upgrades the portal's document-to-document
+graph to the granularity the product promises: amending documents state their
+targets explicitly ("S ử a đ ổ i, b ổ  sung Đ i ề u 5 c ủ a…"), parsed by regex patterns with
+a cheap LLM for messy cases — grounded extraction, not inference.
+§  U P DAT E  A RC H I T E CT U R E
+The knowledge graph stays current
+New documents are published continuously; validity statuses flip; amendments
+land. The graph is therefore built as an append-only, delta-driven system: every
+refresh is a snapshot run whose cost is proportional to what changed, not to the
+corpus.
+NEW
+META_CHANGED
+CONTENT_CHANGED
+MISSING
+Snapshot pull
+HF refresh / vbpl.vn crawl
+Diff vs ingest_ledger
+metadata + content 
+hashes
+Classify
+Parse →  version →
+embed →  index
+New doc_version
+e.g. validity flip
+Re-parse changed 
+articles
+re-embed only those
+Tombstone
+Propagate:
+recompute 
+effective_status
+for affected subgraph
+Invalidate stale
+report citations
+Run report:
+counts + anomalies
+The refresh job — scheduled (cron) and idempotent: re-running the same snapshot is a no-op.
+Mechanisms
+Ingest ledger + hashing. Each incoming document is classified against stored
+(metadata_hash, content_hash)  as NEW / META_CHANGED /
+CONTENT_CHANGED / UNCHANGED / MISSING. Only changed documents
+flow through parse →  chunk →  embed.
+Append-only versions, tombstones for deletion. Nothing is updated in place;
+superseded rows get seen_to  stamped and is_current=false . History is
+queryable; rollback is trivial.
+Incremental propagation. When document X changes, the affected set is
+computed by graph closure (X's articles plus neighbors via
+amends/repeals/guides edges) and derived effective_status  is recomputed
+for that subgraph only. Article-edge extraction re-runs only for changed
+amending documents.
+Transactional index sync Vector + full text indexes live in the same Postgres
+8/23/26, 1:53 AM Rà Soát Blueprint
+https://claude.ai/code/artifact/6a12b4a8-ff99-4b92-8614-308c082a098b 4/7
+
+Transactional index sync. Vector + full-text indexes live in the same Postgres
+as the graph, so a delta commit updates graph and indexes atomically — no
+drift between "what the graph knows" and "what search returns". Queries filter
+on is_current .
+Embedding model versioning. Every chunk records its embedding_model ;
+upgrading the embedder becomes a tracked batch migration, not a flag-day
+rebuild.
+Edge provenance. Portal edges ( source='vbpl' ) and extracted edges
+( source='extracted' , with model + confidence) are never merged silently;
+refreshed portal data can correct extracted edges but not vice versa.
+Report invalidation. report_citations  links past analyses to the article
+versions they cited; when a version is superseded, affected reports are flagged
+— enabling "a document cited in your report has changed" notices later.
+Why not GraphRAG-style construction? LLM entity-graph extraction exists for
+corpora that lack a graph. This corpus ships an authoritative, human-curated one.
+The only construction performed is grounded article-level edge parsing from
+explicit amendment statements — cheap, verifiable, and re-runnable per delta.
+§  M O D E L  S TAC K
+Two-tier LLM usage via OpenRouter
+STAGE MODEL TIER NOTES
+Embeddings bge-m3 (local) Multilingual, strong on
+Vietnamese legal benchmarks;
+swap only if eval shows it's the
+bottleneck.
+Reranking bge-reranker-v2-m3 (local) Cross-encoder over top ~100
+candidates per clause.
+Pairwise judgment Frontier (Claude / GPT-
+class)
+Low volume per query (~10–50
+pairs); quality is the product
+here. Pinned model version.
+Bulk offline (edge
+extraction,
+decomposition)
+Cheap fast model High volume, mechanical;
+regex first, LLM for residue.
+8/23/26, 1:53 AM Rà Soát Blueprint
+https://claude.ai/code/artifact/6a12b4a8-ff99-4b92-8614-308c082a098b 5/7
+
+OpenRouter is configured with a provider allowlist / ZDR flag so lawyers' drafts
+route only to no-training, no-retention providers, and exact model versions are
+pinned for eval reproducibility.
+§  T E A M  A L LO CAT I O N
+Five agents, one thin slice
+Data & Graph Engineer
+RUNS FIRST — OWNS THE GROUND
+TRUTH
+Parquet ingestion; HTML →
+Ph ầ n/Ch ươ ng/M ụ c/ Đ i ề u/Kho ả n
+parser
+Versioned schema, ingest ledger,
+delta pipeline
+Article-level edge extraction jobs
+Retrieval Engineer
+SEARCH QUALITY
+Article-level chunking with
+hierarchical metadata
+Hybrid index (pgvector + FTS) +
+reranker
+Metadata-filtered retrieval API;
+incremental upsert
+Conflict-Analysis Engineer
+THE JUDGMENT CORE
+Clause decomposition; graph
+expansion logic
+Pairwise LLM judgment prompts +
+structured outputs
+Hierarchy rule engine; report
+composer
+App Engineer
+THE LAW YER'S SURFACE
+FastAPI backend; paste-draft →
+report web UI
+Citation rendering, validity +
+amendment warnings
+OpenRouter config, pinning, ZDR
+routing
+Evaluation Engineer
+KNOWS WHETHER IT WORKS
+Weak-label gold set from
+repeal/amend edges
+Retrieval recall@k; judgment
+precision/recall
+Ablations: hybrid vs dense, graph vs
+no graph
+8/23/26, 1:53 AM Rà Soát Blueprint
+https://claude.ai/code/artifact/6a12b4a8-ff99-4b92-8614-308c082a098b 6/7
+
+no-graph
+Sequencing. The Data & Graph Engineer runs first and delivers a sample slice —
+one legal sector, a few thousand documents — within the versioned schema. The
+other four build against that slice in parallel; scale-up to the full 171K corpus is a
+script run, not new code.
+§  T H I N  S L I C E  &  R I S KS
+Definition of done, and what could bite
+MVP is done when: a lawyer pastes a draft provision into the web UI and receives,
+within about a minute, a per-clause report over the sample sector — each finding
+classified (conflict / overlap / related), severity-ranked by hierarchy, and cited to
+exact Đ i ề u/Kho ả n with current-validity and amended-by flags — and the eval
+harness reports retrieval recall@k and judgment precision/recall on the weak-
+label set.
+parsing  Vietnamese legal HTML is inconsistent across decades; the parser
+needs a fallback path (flat article split) and a parse-quality metric from day
+one.
+false positives  Flagging conflicts against repealed or amended text destroys
+trust instantly — validity and amendment flags are enforced in the retrieval
+filter, not just displayed.
+false negatives  The expensive error. Retrieval is tuned recall-first; the eval
+gold set exists precisely to measure the miss rate before lawyers do.
+eval validity  Weak labels from repeal/amend edges approximate conflict; a
+small hand-checked set (and later, B ộ  T ư  pháp rà soát reports) calibrates
+them.
+Rà Soát Blueprint · gov_law_assistant
+8/23/26, 1:53 AM Rà Soát Blueprint
+https://claude.ai/code/artifact/6a12b4a8-ff99-4b92-8614-308c082a098b 7/7

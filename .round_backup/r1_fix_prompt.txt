@@ -1,0 +1,47 @@
+Bối cảnh: Bạn vừa thêm hàm resolve_references() vào files/vbpl_store.py để điền resolved_doc_id/
+resolved_provision_id cho citations/amendments/document_edges. Tôi (reviewer) vừa xác minh trực
+tiếp trên DB và phát hiện bảng `citations` là DEAD SCHEMA từ trước khi bạn đụng vào:
+
+- files/vbpl_extract.py:992-993 cho thấy extract_citations() KHÔNG bao giờ được insert vào bảng
+  `citations` — dữ liệu của nó được convert thẳng thành document_edges rows (relation_type=
+  INLINE_CITATION khi kind=='doc', INTERNAL_REFERENCE khi kind=='provision').
+- Không có bất kỳ `INSERT INTO citations` nào trong toàn bộ files/vbpl_store.py.
+- Bảng `citations` chỉ được DELETE (dọn rác khi re-ingest) và giờ có thêm code resolve của bạn,
+  nhưng không có gì insert vào nó -> mãi mãi 0 dòng -> code resolve cho citations là vô nghĩa.
+- document_edges đã có đầy đủ và tốt hơn những gì citations định làm: resolved (bool),
+  target_doc_id, target_provision_id, source_method, confidence, evidence_span.
+
+Việc cần làm — DỌN BỎ bảng citations vì nó bị thay thế hoàn toàn bởi document_edges (không sửa
+lại thành có insert, vì sẽ tạo ra 2 nơi lưu cùng một fact — không cần thiết):
+
+1. files/vbpl_store.py:
+   - Bỏ `CREATE TABLE IF NOT EXISTS citations (...)` khỏi DDL.
+   - Bỏ entry "citations" khỏi _REF_TABLES trong resolve_references().
+   - Bỏ dòng xử lý citations trong vòng lặp DELETE khi re-ingest (dòng có
+     `("appendix_table_rows", "doc_id"), ("citations", "src_provision_id")` và nhánh
+     `if col == "src_provision_id"`).
+   - Sửa comment dòng 7 (không còn liệt kê citations trong SILVER layer).
+2. files/schema_postgres.sql: bỏ `CREATE TABLE citations (...)` và 2 index của nó. Sửa ví dụ
+   truy vấn ở cuối file (dùng document_edges thay vì citations, giữ đúng tinh thần ví dụ cũ:
+   "Impact analysis: sửa Điều 9 TT 200 thì ảnh hưởng ai?").
+3. files/import_duckdb_to_postgres.py: bỏ "citations" khỏi danh sách bảng được copy sang Postgres
+   (dòng có `amendments, citations, provision_versions, provisions,`).
+4. files/ingest_parquet_sample.py: bỏ "citations" khỏi 2 chỗ — vòng lặp in resolution stats
+   (`for table in ["citations", "amendments", "document_edges"]`) và danh sách bảng in count cuối
+   script.
+5. files/vbpl_extract.py: comment dòng 11 hiện liệt kê "citations" như một fact type sản phẩm ra —
+   giữ nguyên comment đó (extract_citations() vẫn tồn tại và feed document_edges, không xoá hàm),
+   nhưng nếu có comment nào khác ngụ ý citations là một BẢNG lưu trữ riêng thì sửa cho khớp thực tế
+   (nó chỉ là bước trung gian nạp vào document_edges).
+
+Sau khi sửa xong:
+1. python -m py_compile files\vbpl_extract.py files\vbpl_store.py files\ingest_parquet_sample.py files\import_duckdb_to_postgres.py
+2. python -u files\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite
+3. python files\validate_parse_invariants.py --db legal_sample_200.duckdb --expected-docs 200
+   (phải vẫn PASS=27 WARN=0 FAIL=0)
+4. In lại thống kê resolution cho amendments/document_edges (không còn citations trong output).
+5. Kiểm tra: `select count(*) from information_schema.tables where table_name='citations'` trên
+   DuckDB phải trả về 0 (bảng không còn tồn tại).
+
+Ràng buộc: không sửa gì khác ngoài phạm vi trên. Không thêm comment giải thích code làm gì. In ra
+danh sách file đã sửa ở cuối.

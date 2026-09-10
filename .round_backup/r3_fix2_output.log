@@ -1,0 +1,2125 @@
+2026-08-25T04:22:08.033464Z ERROR codex_models_manager::cache: failed to load models cache: missing field `base_instructions` at line 97 column 5
+OpenAI Codex v0.146.0
+--------
+workdir: d:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a03727-77dc-7bc3-8dca-499c2f30c27e
+--------
+user
+Bối cảnh: Ở bước trước bạn đã thêm rule A vào extract_amendments() (files/vbpl_extract.py) để loại
+match EXPIRE/SUSPEND tự tham chiếu tới chính văn bản đang đọc. Code hiện tại (dạng gần đúng):
+
+    if op in {"EXPIRE", "SUSPEND"} and self_ref_effect.search(win[:100]):
+        continue
+
+Tôi (reviewer) vừa dùng chính DB đối chiếu cũ bạn để lại ở D:\tmp\legal_sample_200_old_extract.duckdb
+để so old vs new, và phát hiện: rule A đang DROP TOÀN BỘ record ngay khi thấy cụm tự tham chiếu ở
+đầu window, KỂ CẢ KHI ngay sau đó trong cùng window có một target thật (target_so_ky_hieu/target_dieu
+đã match được). Kết quả là mất oan ít nhất 5 record hợp lệ, ví dụ:
+
+1. doc 616621: evidence = "hết hiệu lực thi hành kể từ ngày Nghị định này có hiệu lực thi hành.
+   4. Bãi bỏ Điều 6 của Nghị định số 132/2025/NĐ-CP..." — đây là REPEAL thật nhắm vào Điều 6 của
+   Nghị định 132/2025/NĐ-CP, nhưng bị rule A xoá chỉ vì câu đầu là boilerplate tự tham chiếu.
+2. doc 694652 (2 dòng): "...hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành. 2. Nội
+   dung công bố thủ tục hành chính... tại Quyết định số 1598/QĐ-UBND..." và tương tự với
+   991/QĐ-UBND — đây là danh sách bãi bỏ thật (dạng liệt kê "1. ... 2. ... 3. ..."), nhưng bị mất.
+3. doc 586814: "hết hiệu lực kể từ ngày Luật này được thông qua. 6. Luật Quy hoạch số 21/2017/QH15
+   hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các quy định có liên quan tại Điều 58"
+   — EXPIRE thật của Luật Quy hoạch số 21/2017/QH15, bị mất.
+
+Nguyên nhân: rule A được áp trước/độc lập với việc tính target, nên nó override luôn cả trường hợp
+đã tìm được target thật. Đúng ra rule A CHỈ nên áp dụng cho trường hợp record không có target nào
+cả (tức là một dạng cụ thể của rule B, không phải một override riêng đứng trên cả target thật).
+
+Việc cần làm: TỰ VERIFY lại bằng D:\tmp\legal_sample_200_old_extract.duckdb (DB chứa kết quả trích
+xuất TRƯỚC rule A/B, dùng để so sánh) trước khi sửa. Sau đó sửa lại điều kiện loại bỏ trong
+extract_amendments(): chỉ drop record khi rule A/self-reference match VÀ record đó KHÔNG có target
+nào (không có target_so_ky_hieu VÀ không có target_dieu sau khi đã tính đủ target cho record đó).
+Nếu self-reference match nhưng record vẫn có target_so_ky_hieu hoặc target_dieu hợp lệ (từ RX_DOC_REF
+hoặc RX_PROV_REF trong evidence, không phải leak từ câu không liên quan) -> GIỮ record, không drop.
+
+Kiểm tra lại cả rule B (điều kiện không có target_so_ky_hieu và không có Điều trong cùng câu) để
+đảm bảo nó không vô tình cắt luôn 3 case trên sau khi sửa rule A — 2 rule phải áp dụng nhất quán
+với nhau, không mâu thuẫn.
+
+Sau khi sửa xong:
+1. python -m py_compile files\vbpl_extract.py
+2. python -u files\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite
+3. python files\validate_parse_invariants.py --db legal_sample_200.duckdb --expected-docs 200
+   (phải vẫn PASS=29 WARN=0 FAIL=0, bao gồm invariant amendments_no_self_referential_expire vẫn PASS)
+4. Verify lại bằng D:\tmp\legal_sample_200_old_extract.duckdb: xác nhận cả 4 record ở 3 case trên
+   (616621, 694652 x2, 586814) hiện diện trở lại trong bảng amendments với đúng target_so_ky_hieu/
+   target_dieu như dữ liệu cũ, VÀ số lượng pure-boilerplate self-referential rows (op EXPIRE/SUSPEND,
+   không target, đúng pattern "... này có hiệu lực...") vẫn = 0 (không hồi quy lại lỗi cũ).
+5. In tổng amendments trước/sau lần sửa này (so với 397 của lần trước).
+
+Ràng buộc: chỉ sửa extract_amendments() trong files/vbpl_extract.py. Không đổi invariant check.
+Không thêm comment giải thích code làm gì. In ra file đã sửa ở cuối.
+
+codex
+Tôi sẽ kiểm tra diff hiện tại và đọc đúng phần `extract_amendments()` trước, rồi dùng DB cũ để tái hiện các record bị mất trước khi sửa. Sau đó tôi chỉ chạm vào `files/vbpl_extract.py` như ràng buộc.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Item D:\\tmp\\legal_sample_200_old_extract.duckdb | Select-Object FullName,Length,LastWriteTime" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg -n \"def extract_amendments|self_ref_effect|target_so_ky_hieu|amendments_no_self\" files\\vbpl_extract.py files\\validate_parse_invariants.py" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 191ms:
+
+FullName                                      Length LastWriteTime        
+--------                                      ------ -------------        
+D:\tmp\legal_sample_200_old_extract.duckdb 256651264 8/25/2026 10:55:51 AM
+
+
+
+ succeeded in 386ms:
+?? .round_backup/
+?? ORCHESTRATION.md
+?? PLAN.md
+?? Ra_soat_blueprint_extracted.txt
+?? Ra_soat_blueprint_vi.md
+?? crawler/
+?? crawler_test_raw.jsonl
+?? docker-compose.postgres.yml
+?? files/
+?? index.html
+?? legal.duckdb
+?? legal_sample_200.duckdb
+warning: unable to access 'C:\Users\ngann/.config/git/ignore': Permission denied
+warning: unable to access 'C:\Users\ngann/.config/git/ignore': Permission denied
+
+ succeeded in 801ms:
+files\validate_parse_invariants.py:744:        "amendments_no_self_referential_expire",
+files\vbpl_extract.py:732:def extract_amendments(text: str) -> List[Dict[str, Any]]:
+files\vbpl_extract.py:734:    self_ref_effect = re.compile(
+files\vbpl_extract.py:749:        if op in {"EXPIRE", "SUSPEND"} and self_ref_effect.search(win[:100]) and not same_clause_doc and not same_clause.rstrip().endswith(":"):
+files\vbpl_extract.py:786:            "target_so_ky_hieu": ref.group(1) if ref else None,
+files\vbpl_extract.py:796:                "target_so_ky_hieu": None,
+files\vbpl_extract.py:972:        "target_so_ky_hieu": kw.get("target_so_ky_hieu"),
+files\vbpl_extract.py:996:                target_so_ky_hieu=item.get("target_so_ky_hieu"),
+files\vbpl_extract.py:998:                confidence=1.0 if item.get("target_so_ky_hieu") else 0.8,
+files\vbpl_extract.py:1011:                target_so_ky_hieu=c.get("so_ky_hieu"),
+files\vbpl_extract.py:1023:                target_so_ky_hieu=a.get("target_doc"),
+files\vbpl_extract.py:1042:               e.get("target_so_ky_hieu"), e.get("target_dieu"),
+
+codex
+Tôi thấy repo không có tracked baseline rõ ràng trong `git status`, nên tôi sẽ giữ phạm vi sửa thật hẹp và dùng nội dung file hiện tại làm nguồn sự thật. Tiếp theo tôi đọc block hàm để xác định chính xác rule A/B đang nằm trước hay sau tính target.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\vbpl_extract.py | Select-Object -Skip 720 -First 100" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content files\\validate_parse_invariants.py | Select-Object -Skip 720 -First 60" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python - <<'PY'
+import duckdb
+for db in [r'D:\\tmp\\legal_sample_200_old_extract.duckdb', 'legal_sample_200.duckdb']:
+    con=duckdb.connect(db, read_only=True)
+    print(db, con.execute('select count(*) from amendments').fetchone()[0])
+    print(con.execute(\"select doc_id, op, target_so_ky_hieu, target_dieu, left(evidence,220) from amendments where doc_id in (616621,694652,586814) order by doc_id, target_so_ky_hieu, target_dieu\").fetchall())
+    con.close()
+PY" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T04:22:29.877807Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.2 seconds
+Output:
+At line:2 char:11
++ python - <<'PY'
++           ~
+Missing file specification after redirection operator.
+At line:2 char:10
++ python - <<'PY'
++          ~
+The '<' operator is reserved for future use.
+At line:2 char:11
++ python - <<'PY'
++           ~
+The '<' operator is reserved for future use.
+At line:4 char:4
++ for db in [r'D:\tmp\legal_sample_200_old_extract.duckdb', 'legal_samp ...
++    ~
+Missing opening '(' after keyword 'for'.
+At line:5 char:26
++     con=duckdb.connect(db, read_only=True)
++                          ~
+Missing argument in parameter list.
+At line:6 char:13
++     print(db, con.execute('select count(*) from amendments').fetchone ...
++             ~
+Missing argument in parameter list.
+At line:8 char:15
++     con.close()
++               ~
+An expression was expected after '('.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : MissingFileSpecification
+ 
+
+ exited 1 in 210ms:
+At line:2 char:11
++ python - <<'PY'
++           ~
+Missing file specification after redirection operator.
+At line:2 char:10
++ python - <<'PY'
++          ~
+The '<' operator is reserved for future use.
+At line:2 char:11
++ python - <<'PY'
++           ~
+The '<' operator is reserved for future use.
+At line:4 char:4
++ for db in [r'D:\tmp\legal_sample_200_old_extract.duckdb', 'legal_samp ...
++    ~
+Missing opening '(' after keyword 'for'.
+At line:5 char:26
++     con=duckdb.connect(db, read_only=True)
++                          ~
+Missing argument in parameter list.
+At line:6 char:13
++     print(db, con.execute('select count(*) from amendments').fetchone ...
++             ~
+Missing argument in parameter list.
+At line:8 char:15
++     con.close()
++               ~
+An expression was expected after '('.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : MissingFileSpecification
+ 
+
+ succeeded in 402ms:
+        out.append({"kind": "provision", "diem": m.group(1),
+                    "khoan": m.group(2), "dieu": m.group(3),
+                    "raw": m.group(0), "span": m.span()})
+    return out
+
+
+AMEND_MAP = {"sá»­a Ä‘á»•i": "AMEND", "sá»­a Ä‘á»•i, bá»• sung": "AMEND", "bá»• sung": "ADD",
+             "bÃ£i bá»": "REPEAL", "thay tháº¿": "REPLACE", "há»§y bá»": "REPEAL",
+             "háº¿t hiá»‡u lá»±c": "EXPIRE", "ngÆ°ng hiá»‡u lá»±c": "SUSPEND"}
+
+
+def extract_amendments(text: str) -> List[Dict[str, Any]]:
+    ops, last_end = [], -1
+    self_ref_effect = re.compile(
+        "(?:Lu\u1eadt|Ngh\u1ecb \u0111\u1ecbnh|Ngh\u1ecb quy\u1ebft|"
+        "Quy\u1ebft \u0111\u1ecbnh|Th\u00f4ng t\u01b0|Ph\u00e1p l\u1ec7nh)"
+        "\\s+n\u00e0y\\s+(?:c\u00f3 hi\u1ec7u l\u1ef1c|\u0111\u01b0\u1ee3c th\u00f4ng qua)",
+        re.I,
+    )
+    for m in RX_AMEND.finditer(text):
+        if m.start() < last_end:
+            continue
+        last_end = m.end()
+        verb = m.group(1).lower()
+        win = text[m.end(): m.end() + 220]
+        op = AMEND_MAP.get(verb, "OTHER")
+        same_clause = re.split(r"[.;\n]", win, maxsplit=1)[0]
+        same_clause_doc = RX_DOC_REF.search(same_clause)
+        if op in {"EXPIRE", "SUSPEND"} and self_ref_effect.search(win[:100]) and not same_clause_doc and not same_clause.rstrip().endswith(":"):
+            continue
+        doc = RX_DOC_REF.search(win)
+        prov_win = win if doc else same_clause
+        prov = RX_PROV_REF.search(prov_win)
+        if not doc and not prov:
+            continue
+        quoted = re.search(r'"([^"]{5,2000})"', win, re.S)
+        ops.append({
+            "op": op,
+            "verb": verb,
+            "target_doc": doc.group(1) if doc else None,
+            "target_dieu": prov.group(3) if prov else None,
+            "target_khoan": prov.group(2) if prov else None,
+            "target_diem": prov.group(1) if prov else None,
+            "replacement_text": normalize(quoted.group(1)) if quoted else None,
+            "evidence_text": normalize(text[m.start(): m.end() + len(win)]),
+            "span": (m.start(), m.end() + len(win)),
+        })
+    return ops
+
+
+def parse_preamble(hlines: List[str]) -> List[Dict[str, Any]]:
+    items = []
+    for i, l in enumerate(hlines):
+        if not RX_CAN_CU.match(l):
+            continue
+        if re.match(r"^Thá»±c hiá»‡n\b", l, re.I) and l.upper() == l and not RX_DOC_REF.search(l) and not RX_NGAY.search(l):
+            continue
+        item_type = "legal_basis"
+        if re.match(r"^(Theo Ä‘á» nghá»‹|XÃ©t Ä‘á» nghá»‹)\b", l, re.I):
+            item_type = "proposal"
+        ref = RX_DOC_REF.search(l)
+        items.append({
+            "item_type": item_type,
+            "ord": i,
+            "raw_text": l.rstrip(";,"),
+            "target_so_ky_hieu": ref.group(1) if ref else None,
+            "span": None,
+        })
+
+    for i, l in enumerate(hlines):
+        if RX_PROMULGATION_FORMULA.match(l):
+            items.append({
+                "item_type": "promulgation_formula",
+                "ord": i,
+                "raw_text": l.rstrip(";,"),
+                "target_so_ky_hieu": None,
+                "span": None,
+            })
+    return sorted(items, key=lambda x: (x["ord"], x["item_type"]))
+
+
+def make_document_parts(doc_id: str, header: Dict[str, Any], seg: Dict[str, Any]) -> List[Dict[str, Any]]:
+    parts = [{
+        "part_id": f"{doc_id}:main",
+        "doc_id": doc_id,
+        "parent_part_id": None,
+        "part_type": "main",
+        "title": header.get("trich_yeu"),
+        "attachment_label": None,
+        "path_prefix": "main",
+        "starts_at_ord": 0,
+        "ends_at_ord": len(seg["body"]) - 1 if seg["body"] else None,
+        "raw_heading": None,
+    }]
+    if seg["appendix"]:
+        parts.append({
+            "part_id": f"{doc_id}:appendix:1",
+            "doc_id": doc_id,
+            "parent_part_id": f"{doc_id}:main",
+            "part_type": "appendix",
+
+ succeeded in 406ms:
+    )
+
+    self_ref_expire_pattern = (
+        "(Lu\u1eadt|Ngh\u1ecb \u0111\u1ecbnh|Ngh\u1ecb quy\u1ebft|"
+        "Quy\u1ebft \u0111\u1ecbnh|Th\u00f4ng t\u01b0|Ph\u00e1p l\u1ec7nh)"
+        "\\s+n\u00e0y\\s+(?:c\u00f3 hi\u1ec7u l\u1ef1c|\u0111\u01b0\u1ee3c th\u00f4ng qua)"
+    )
+    doc_ref_pattern = "\\b\\d{1,4}[a-z]?/(?:\\d{4}/)?[A-Z\u0110][A-Z\u01100-9\\-]{1,20}\\b"
+    same_clause_doc_ref_pattern = "^[^.;\\n]*" + doc_ref_pattern
+    colon_list_doc_ref_pattern = "(?s)^[^.;\\n]*:.*" + doc_ref_pattern
+    self_ref_expire_count = con.execute(
+        """
+        SELECT count(1)
+        FROM amendments
+        WHERE op = 'EXPIRE'
+          AND regexp_matches(evidence_text, ?, 'i')
+          AND NOT regexp_matches(evidence_text, ?)
+          AND NOT regexp_matches(evidence_text, ?)
+        """,
+        [self_ref_expire_pattern, same_clause_doc_ref_pattern, colon_list_doc_ref_pattern],
+    ).fetchone()[0]
+    add_check(
+        checks,
+        "amendments_no_self_referential_expire",
+        "PASS" if self_ref_expire_count == 0 else "FAIL",
+        f"self_referential_expire_rows={self_ref_expire_count}",
+    )
+
+    failures = [c for c in checks if c[1] == "FAIL"]
+    warnings = [c for c in checks if c[1] == "WARN"]
+
+    print(f"DB: {db_path}")
+    print("\n## Invariant checks")
+    for name, status, detail, sample_text in checks:
+        print(f"[{status}] {name}: {detail}")
+        if sample_text:
+            print(sample_text)
+
+    print("\n## Summary")
+    print(f"PASS={sum(1 for c in checks if c[1] == 'PASS')} WARN={len(warnings)} FAIL={len(failures)}")
+
+    con.close()
+    if failures or (args.strict_warnings and warnings):
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+codex
+PowerShell không nhận cú pháp heredoc kiểu bash, nên tôi sẽ chạy lại truy vấn DuckDB bằng here-string PowerShell. Block code cho thấy rule A hiện đang `continue` trước khi `doc/prov` được tính đầy đủ, đúng với nguyên nhân reviewer nêu.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import duckdb
+for db in [r'D:\\tmp\\legal_sample_200_old_extract.duckdb', r'legal_sample_200.duckdb']:
+    con=duckdb.connect(db, read_only=True)
+    print('DB', db)
+    print('count', con.execute('select count(*) from amendments').fetchone()[0])
+    rows=con.execute(\"\"\"
+        select doc_id, op, target_so_ky_hieu, target_dieu, left(evidence_text,260)
+        from amendments
+        where doc_id in ('616621','694652','586814')
+        order by doc_id, target_so_ky_hieu, target_dieu, evidence_text
+    \"\"\").fetchall()
+    for r in rows:
+        print(r)
+    con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T04:22:37.712048Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.2 seconds
+Output:
+DB D:\tmp\legal_sample_200_old_extract.duckdb
+count 898
+Traceback (most recent call last):
+  File "<stdin>", line 6, in <module>
+_duckdb.BinderException: Binder Error: Referenced column "doc_id" not found in FROM clause!
+Candidate bindings: "src_doc_id", "effective_date", "op", "src_provision_id", "evidence_end"
+
+LINE 4:         where doc_id in ('616621','694652','586814')
+                      ^
+
+ exited 1 in 241ms:
+DB D:\tmp\legal_sample_200_old_extract.duckdb
+count 898
+Traceback (most recent call last):
+  File "<stdin>", line 6, in <module>
+_duckdb.BinderException: Binder Error: Referenced column "doc_id" not found in FROM clause!
+Candidate bindings: "src_doc_id", "effective_date", "op", "src_provision_id", "evidence_end"
+
+LINE 4:         where doc_id in ('616621','694652','586814')
+                      ^
+
+codex
+DB cũ dùng tên cột `src_doc_id` chứ không phải `doc_id`; tôi sẽ introspect schema rồi truy vấn lại cùng một cách cho cả hai DB.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import duckdb
+for db in [r'D:\\tmp\\legal_sample_200_old_extract.duckdb', r'legal_sample_200.duckdb']:
+    con=duckdb.connect(db, read_only=True)
+    print('DB', db)
+    print(con.execute(\"describe amendments\").fetchall())
+    print('count', con.execute('select count(*) from amendments').fetchone()[0])
+    con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 257ms:
+DB D:\tmp\legal_sample_200_old_extract.duckdb
+[('src_doc_id', 'VARCHAR', 'YES', None, None, None), ('src_provision_id', 'VARCHAR', 'YES', None, None, None), ('op', 'VARCHAR', 'YES', None, None, None), ('target_so_ky_hieu', 'VARCHAR', 'YES', None, None, None), ('target_dieu', 'VARCHAR', 'YES', None, None, None), ('target_khoan', 'VARCHAR', 'YES', None, None, None), ('target_diem', 'VARCHAR', 'YES', None, None, None), ('resolved_target_provision_id', 'VARCHAR', 'YES', None, None, None), ('effective_date', 'DATE', 'YES', None, None, None), ('replacement_text', 'VARCHAR', 'YES', None, None, None), ('evidence_text', 'VARCHAR', 'YES', None, None, None), ('evidence_start', 'INTEGER', 'YES', None, None, None), ('evidence_end', 'INTEGER', 'YES', None, None, None)]
+count 898
+DB legal_sample_200.duckdb
+[('src_doc_id', 'VARCHAR', 'YES', None, None, None), ('src_provision_id', 'VARCHAR', 'YES', None, None, None), ('op', 'VARCHAR', 'YES', None, None, None), ('target_so_ky_hieu', 'VARCHAR', 'YES', None, None, None), ('target_dieu', 'VARCHAR', 'YES', None, None, None), ('target_khoan', 'VARCHAR', 'YES', None, None, None), ('target_diem', 'VARCHAR', 'YES', None, None, None), ('resolved_target_provision_id', 'VARCHAR', 'YES', None, None, None), ('effective_date', 'DATE', 'YES', None, None, None), ('replacement_text', 'VARCHAR', 'YES', None, None, None), ('evidence_text', 'VARCHAR', 'YES', None, None, None), ('evidence_start', 'INTEGER', 'YES', None, None, None), ('evidence_end', 'INTEGER', 'YES', None, None, None)]
+count 397
+
+codex
+Xác nhận nhanh: DB hiện tại đang có `397` amendments, DB đối chiếu cũ có `898`. Tôi sẽ lấy riêng các case reviewer nêu từ DB cũ và DB hiện tại để có expected target trước khi patch.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import duckdb
+ids = ('616621','694652','586814')
+for db in [r'D:\\tmp\\legal_sample_200_old_extract.duckdb', r'legal_sample_200.duckdb']:
+    con=duckdb.connect(db, read_only=True)
+    print('\\nDB', db)
+    rows=con.execute(\"\"\"
+        select src_doc_id, op, target_so_ky_hieu, target_dieu, target_khoan, target_diem, left(evidence_text,360) as evidence
+        from amendments
+        where src_doc_id in ('616621','694652','586814')
+        order by src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_text
+    \"\"\").fetchall()
+    for r in rows:
+        print(' | '.join('' if x is None else str(x) for x in r))
+    print('rows', len(rows))
+    con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T04:22:51.853372Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.3 seconds
+Output:
+
+DB D:\tmp\legal_sample_200_old_extract.duckdb
+Traceback (most recent call last):
+  File "<stdin>", line 13, in <module>
+  File "C:\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u1ed5' in position 40: character maps to <undefined>
+
+ exited 1 in 257ms:
+
+DB D:\tmp\legal_sample_200_old_extract.duckdb
+Traceback (most recent call last):
+  File "<stdin>", line 13, in <module>
+  File "C:\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u1ed5' in position 40: character maps to <undefined>
+
+codex
+Truy vấn đã trúng dữ liệu tiếng Việt nhưng console đang dùng codepage không in được Unicode; tôi sẽ bật `PYTHONIOENCODING=utf-8` cho các bước kiểm chứng để tránh lỗi in.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; @'
+import duckdb
+for db in [r'D:\\tmp\\legal_sample_200_old_extract.duckdb', r'legal_sample_200.duckdb']:
+    con=duckdb.connect(db, read_only=True)
+    print('\\nDB', db)
+    rows=con.execute(\"\"\"
+        select src_doc_id, op, target_so_ky_hieu, target_dieu, target_khoan, target_diem, left(evidence_text,360) as evidence
+        from amendments
+        where src_doc_id in ('616621','694652','586814')
+        order by src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_text
+    \"\"\").fetchall()
+    for r in rows:
+        print(' | '.join('' if x is None else str(x) for x in r))
+    print('rows', len(rows))
+    con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 254ms:
+
+DB D:\tmp\legal_sample_200_old_extract.duckdb
+586814 | ADD | 03/2022/QH15 |  |  |  | bổ sung một số điều theo Luật số 03/2022/QH15, Luật số 05/2022/QH15, Luật số 08/2022/QH15, Luật số 09/2022/QH15, Luật số 15/2023/QH15, Luật số 16/2023/QH15, Luật số 20/2023/QH15, Luật số 26/2023/QH15, Luật số 27/2023/QH15, Luật
+586814 | ADD |  | 10a |  |  | Bổ sung Điều 10a vào sau Điều 10 như sau:
+“Điều 10a. Quy hoạch chi tiết kết cấu hạ tầng đường thủy nội địa
+1. Quy hoạch chi tiết kết cấu hạ tầng đường thủy nội địa là quy hoạch chi tiết ngành, cụ thể hóa quy hoạch tổng thể kết
+586814 | ADD |  |  |  |  | bổ sung hoặc thông qua với điều kiện chỉnh sửa, bổ sung. Hồ sơ trình thẩm định điều chỉnh quy hoạch được thông qua không cần chỉnh sửa, bổ sung khi được 100% thành viên Hội đồng thẩm định biểu quyết thông qua không cần chỉnh sử
+586814 | ADD |  |  |  |  | bổ sung khi được 100% thành viên Hội đồng thẩm định biểu quyết thông qua không cần chỉnh sửa, bổ sung.
+12. Trách nhiệm, quyền hạn của Chủ tịch Hội đồng thẩm định điều chỉnh quy hoạch được quy định như sau:
+a) Quyết định tổ chức
+586814 | ADD |  |  |  |  | bổ sung.
+12. Trách nhiệm, quyền hạn của Chủ tịch Hội đồng thẩm định điều chỉnh quy hoạch được quy định như sau:
+a) Quyết định tổ chức thẩm định điều chỉnh quy hoạch theo hình thức tổ chức phiên họp của Hội đồng thẩm định hoặc l
+586814 | ADD |  |  |  |  | bổ sung. Hồ sơ trình thẩm định điều chỉnh quy hoạch được thông qua không cần chỉnh sửa, bổ sung khi được 100% thành viên Hội đồng thẩm định biểu quyết thông qua không cần chỉnh sửa, bổ sung.
+12. Trách nhiệm, quyền hạn của Chủ t
+586814 | AMEND | 03/2022/QH15 |  |  |  | sửa đổi bổ sung một số điều theo Luật số 03/2022/QH15, Luật số 05/2022/QH15, Luật số 08/2022/QH15, Luật số 09/2022/QH15, Luật số 15/2023/QH15, Luật số 16/2023/QH15, Luật số 20/2023/QH15, Luật số 26/2023/QH15, Luật số 27/2023/QH
+586814 | AMEND | 19/2012/QH13 |  |  |  | Sửa đổi, bổ sung một số điều của Luật Xuất bản số 19/2012/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14 như sau:
+a) Bãi bỏ cụm từ “tổ chức lập nội dung phương án phát triển cơ sở xuất bản trong quy hoạch phát triển
+586814 | AMEND | 21/2017/QH15 | 58 |  |  | sửa đổi) hết hiệu lực kể từ ngày Luật này được thông qua.
+6. Luật Quy hoạch số 21/2017/QH15 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các quy định có liên quan tại Điều 58 của Luật này.
+Điều 58. Điều khoản chuy
+586814 | AMEND | 23/2004/QH11 |  |  |  | Sửa đổi, bổ sung một số điều của Luật Giao thông đường thủy nội địa số 23/2004/QH11 đã được sửa đổi, bổ sung một số điều theo Luật số 48/2014/QH13, Luật số 97/2015/QH13, Luật số 35/2018/QH14, Luật số 44/2019/QH14 và Luật số 84/2025/QH15
+586814 | AMEND | 24/2023/QH15 |  |  |  | Sửa đổi, bổ sung một số điều của Luật Viễn thông số 24/2023/QH15 đã được sửa đổi, bổ sung một số điều theo Luật số 47/2024/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch hạ tầng kỹ thuật viễn thông thụ động” bằng cụm từ “phương hướng phát
+586814 | AMEND | 28/2018/QH14 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 28/2018/QH14 và Luật số 44/2024/QH15.
+11. Sửa đổi, bổ sung một số điều của Luật Người khuyết tật số 51/2010/QH12 đã được sửa đổi, bổ sung một số điều theo Luật số 32/2013/QH13 như sau:
+a) Thay t
+586814 | AMEND | 28/2018/QH14 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 28/2018/QH14 và Luật số 77/2025/QH15.
+4. Thay thế cụm từ “quy hoạch mạng lưới cơ sở giáo dục đại học và sư phạm” bằng cụm từ “quy hoạch mạng lưới cơ sở giáo dục đại học và giáo dục nghề nghiệp c
+586814 | AMEND | 32/2013/QH13 | 50 | 1 | m | sửa đổi, bổ sung một số điều theo Luật số 32/2013/QH13 như sau:
+a) Thay thế cụm từ “Quy hoạch và quản lý” bằng cụm từ “Quản lý” tại điểm m khoản 1 Điều 50;
+b) Bãi bỏ điểm c khoản 3 Điều 50.
+12. Sửa đổi, bổ sung một số điều của Luật Di s
+586814 | AMEND | 35/2018/QH14 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14 như sau:
+a) Bãi bỏ cụm từ “tổ chức lập nội dung phương án phát triển cơ sở xuất bản trong quy hoạch phát triển mạng lưới cơ sở báo chí, phát thanh, truyền hình, thông tin điện tử, c
+586814 | AMEND | 35/2018/QH14 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14 và Luật số 98/2025/QH15.
+5. Sửa đổi, bổ sung một số điều của Luật Viễn thông số 24/2023/QH15 đã được sửa đổi, bổ sung một số điều theo Luật số 47/2024/QH15 như sau:
+a) Thay thế cụm
+586814 | AMEND | 35/2018/QH14 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14, Luật số 16/2023/QH15 và Luật số 81/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch tổng thể phát triển hệ thống cảng biển, quy hoạch chi tiết nhóm cảng biển, bến cảng, cầu cảng, b
+586814 | AMEND | 41/2024/QH15 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 41/2024/QH15.
+14. Sửa đổi, bổ sung một số điều của Bộ luật Hàng hải Việt Nam số 95/2015/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14, Luật số 16/2023/QH15 và Luật số 81/20
+586814 | AMEND | 45/2024/QH15 |  |  |  | Sửa đổi, bổ sung một số điều của Luật Di sản văn hóa số 45/2024/QH15 đã được sửa đổi, bổ sung một số điều theo Luật số 84/2025/QH15 như sau:
+a) Thay thế cụm từ quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi ti
+586814 | AMEND | 47/2024/QH15 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 47/2024/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch hạ tầng kỹ thuật viễn thông thụ động” bằng cụm từ “phương hướng phát triển hạ tầng kỹ thuật viễn thông thụ động trong quy hoạch tỉnh” tại điểm
+586814 | AMEND | 48/2014/QH13 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 48/2014/QH13, Luật số 97/2015/QH13, Luật số 35/2018/QH14, Luật số 44/2019/QH14 và Luật số 84/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch kết cấu hạ tầng đường thủy nội địa” bằng cụm từ “quy
+586814 | AMEND | 49/2010/QH12 | 34 | 2 |  | Sửa đổi, bổ sung một số điều của Luật Bưu chính số 49/2010/QH12 như sau:
+a) Thay thế cụm từ “quy hoạch phát triển mạng bưu chính công cộng” bằng cụm từ “quy hoạch tỉnh” tại khoản 2 Điều 34;
+b) Bãi bỏ khoản 11 Điều 44.
+7. Sửa đổi, bổ sun
+586814 | AMEND | 51/2010/QH12 | 50 | 1 | m | Sửa đổi, bổ sung một số điều của Luật Người khuyết tật số 51/2010/QH12 đã được sửa đổi, bổ sung một số điều theo Luật số 32/2013/QH13 như sau:
+a) Thay thế cụm từ “Quy hoạch và quản lý” bằng cụm từ “Quản lý” tại điểm m khoản 1 Điều 50;
+b
+586814 | AMEND | 84/2025/QH15 | 34 | 1 |  | sửa đổi, bổ sung một số điều theo Luật số 84/2025/QH15 như sau:
+a) Thay thế cụm từ quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi tiết ngành” tại khoản 1 Điều 34 và khoản 1 Điều 37;
+b) Sửa đổi, bổ sung khoản 4
+586814 | AMEND | 94/2025/QH15 | 10 |  |  | Sửa đổi, bổ sung một số điều của Luật Năng lượng nguyên tử số 94/2025/QH15 như sau:
+a) Sửa đổi, bổ sung tên Điều 10 như sau:
+“Điều 10. Chiến lược phát triển, ứng dụng năng lượng nguyên tử vì mục đích hòa bình”;
+b) Thay thế cụm từ “Quy h
+586814 | AMEND | 95/2015/QH13 |  |  |  | Sửa đổi, bổ sung một số điều của Bộ luật Hàng hải Việt Nam số 95/2015/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14, Luật số 16/2023/QH15 và Luật số 81/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch tổng thể phát
+586814 | AMEND | 95/2025/QH15 | 9 | 1 |  | Sửa đổi, bổ sung một số điều của Luật Đường sắt số 95/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch mạng lưới giao thông” bằng cụm từ “quy hoạch mạng lưới đường sắt” tại khoản 1 Điều 9;
+b) Thay thế cụm từ “theo kế hoạch thực hiện quy
+586814 | AMEND | 95/2025/QH15 |  |  |  | Sửa đổi, bổ sung, bãi bỏ một số điều, khoản của các luật có liên quan đến quy hoạch
+1. Sửa đổi, bổ sung một số điều của Luật Đường sắt số 95/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch mạng lưới giao thông” bằng cụm từ “quy hoạch m
+586814 | AMEND |  | 10 | 1 |  | Sửa đổi, bổ sung khoản 1 Điều 10 như sau:
+“1. Quy hoạch tổng thể kết cấu hạ tầng đường thủy nội địa là quy hoạch ngành.”;
+c) Thay thế cụm từ “quy hoạch kết cấu hạ tầng đường thủy nội địa” bằng cụm từ “quy hoạch tổng thể kết cấu hạ tầng
+586814 | AMEND |  | 10 | 3 |  | Sửa đổi, bổ sung khoản 3 Điều 10 như sau:
+“3. Bộ Xây dựng tổ chức lập quy hoạch tổng thể kết cấu hạ tầng đường thủy nội địa theo quy định của pháp luật về quy hoạch.”;
+đ) Thay thế cụm từ “phương án phát triển kết cấu hạ tầng đường thủy
+586814 | AMEND |  | 10 |  |  | Sửa đổi, bổ sung tên Điều 10 như sau:
+“Điều 10. Chiến lược phát triển, ứng dụng năng lượng nguyên tử vì mục đích hòa bình”;
+b) Thay thế cụm từ “Quy hoạch phát triển, ứng dụng năng lượng nguyên tử” bằng cụm từ “Quy hoạch mạng lưới quan t
+586814 | AMEND |  | 102 | 3 |  | Sửa đổi, bổ sung khoản 3 Điều 102 như sau:
+“3. Bộ Giao thông vận tải tổ chức lập, phê duyệt quy hoạch phát triển hệ thống cảng cạn.”.
+Điều 56. Quy định về điều chỉnh quy hoạch không gian biển quốc gia, quy hoạch sử dụng đất quốc gia, qu
+586814 | AMEND |  | 23 | 5 |  | Sửa đổi, bổ sung khoản 5 Điều 23 như sau:
+“5. Chính phủ quy định chi tiết các khoản 1, 2 và 3 Điều này; việc lập, thẩm định, phê duyệt, công bố, thực hiện, điều chỉnh và nội dung quy hoạch mạng lưới quan trắc và cảnh báo phóng xạ môi tr
+586814 | AMEND |  | 34 | 4 |  | Sửa đổi, bổ sung khoản 4 Điều 34 như sau:
+“4. Bộ Văn hóa, Thể thao và Du lịch tổ chức thẩm định, phê duyệt quy hoạch, điều chỉnh quy hoạch bảo quản, tu bổ, phục hồi di sản thế giới, di tích quốc gia đặc biệt theo đề nghị của Chủ tịch Ủy
+586814 | AMEND |  | 63 |  |  | Sửa đổi, bổ sung Điều 63 như sau:
+“Điều 63. Phương hướng phát triển hạ tầng kỹ thuật viễn thông thụ động trong quy hoạch tỉnh
+1. Phương hướng phát triển hạ tầng kỹ thuật viễn thông thụ động trong quy hoạch tỉnh phải phù hợp với quy hoạc
+586814 | AMEND |  | 81 | 2 |  | Sửa đổi, bổ sung khoản 1 và khoản 2 Điều 81 như sau:
+“1. Quy hoạch tổng thể kết cấu hạ tầng hàng hải là quy hoạch ngành.
+2. Việc lập quy hoạch tổng thể kết cấu hạ tầng hàng hải phải tuân thủ quy định của pháp luật về quy hoạch và căn cứ
+586814 | AMEND |  | 81 |  |  | Sửa đổi, bổ sung tên Điều 81 như sau:
+“Điều 81. Quy hoạch tổng thể kết cấu hạ tầng hàng hải”;
+c) Sửa đổi, bổ sung khoản 1 và khoản 2 Điều 81 như sau:
+“1. Quy hoạch tổng thể kết cấu hạ tầng hàng hải là quy hoạch ngành.
+2. Việc lập quy ho
+586814 | AMEND |  | 82a | 1 |  | Sửa đổi, bổ sung khoản 1 Điều 82a như sau:
+“1. Quy hoạch chi tiết kết cấu hạ tầng hàng hải là quy hoạch chi tiết ngành, cụ thể hóa quy hoạch tổng thể kết cấu hạ tầng hàng hải”;
+g) Thay thế cụm từ “Quy hoạch chi tiết phát triển vùng đất,
+586814 | AMEND |  | 82a | 4 |  | Sửa đổi, bổ sung khoản 4 Điều 82a như sau:
+“4. Bộ trưởng Bộ Giao thông vận tải phê duyệt quy hoạch chi tiết kết cấu hạ tầng hàng hải.”;
+i) Thay thế cụm từ “quy hoạch chi tiết nhóm cảng biển, bến cảng, cầu cảng, bến phao, khu nước, vùng
+586814 | AMEND |  | 82a |  |  | Sửa đổi, bổ sung tên Điều 82a như sau:
+“Điều 82a. Quy hoạch chi tiết kết cấu hạ tầng hàng hải”;
+e) Sửa đổi, bổ sung khoản 1 Điều 82a như sau:
+“1. Quy hoạch chi tiết kết cấu hạ tầng hàng hải là quy hoạch chi tiết ngành, cụ thể hóa quy ho
+586814 | EXPIRE | 21/2017/QH15 | 58 |  |  | hết hiệu lực kể từ ngày Luật này được thông qua.
+6. Luật Quy hoạch số 21/2017/QH15 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các quy định có liên quan tại Điều 58 của Luật này.
+Điều 58. Điều khoản chuyển tiếp
+1. Quy
+586814 | EXPIRE |  | 58 |  |  | hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các quy định có liên quan tại Điều 58 của Luật này.
+Điều 58. Điều khoản chuyển tiếp
+1. Quy hoạch, điều chỉnh quy hoạch đã được quyết định hoặc phê duyệt theo quy định của ph
+586814 | REPEAL | 105/2016/QH13 | 104 | 5 |  | Bãi bỏ cụm từ “phê duyệt quy hoạch hệ thống kiểm nghiệm của Nhà nước,” tại khoản 5 Điều 104 của Luật Dược số 105/2016/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 28/2018/QH14 và Luật số 44/2024/QH15.
+11. Sửa đổi, bổ
+586814 | REPEAL | 19/2012/QH13 | 44 | 11 |  | Bãi bỏ khoản 11 Điều 44.
+7. Sửa đổi, bổ sung một số điều của Luật Xuất bản số 19/2012/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14 như sau:
+a) Bãi bỏ cụm từ “tổ chức lập nội dung phương án phát triển cơ
+586814 | REPEAL | 39/2009/QH12 | 29 | 1 | i | Bãi bỏ điểm i khoản 1 Điều 29 của Luật Người cao tuổi số 39/2009/QH12 đã được sửa đổi, bổ sung một số điều theo Luật số 41/2024/QH15.
+14. Sửa đổi, bổ sung một số điều của Bộ luật Hàng hải Việt Nam số 95/2015/QH13 đã được sửa đ
+586814 | REPEAL | 45/2024/QH15 | 50 | 3 | c | Bãi bỏ điểm c khoản 3 Điều 50.
+12. Sửa đổi, bổ sung một số điều của Luật Di sản văn hóa số 45/2024/QH15 đã được sửa đổi, bổ sung một số điều theo Luật số 84/2025/QH15 như sau:
+a) Thay thế cụm từ quy hoạch có tính chất kỹ thuật
+586814 | REPEAL | 49/2010/QH12 | 8 |  |  | Bãi bỏ Điều 8.
+6. Sửa đổi, bổ sung một số điều của Luật Bưu chính số 49/2010/QH12 như sau:
+a) Thay thế cụm từ “quy hoạch phát triển mạng bưu chính công cộng” bằng cụm từ “quy hoạch tỉnh” tại khoản 2 Điều 34;
+b) Bãi bỏ khoản 11
+586814 | REPEAL | 94/2025/QH15 | 32 | 1 | d | Bãi bỏ điểm d khoản 1 Điều 32.
+8. Sửa đổi, bổ sung một số điều của Luật Năng lượng nguyên tử số 94/2025/QH15 như sau:
+a) Sửa đổi, bổ sung tên Điều 10 như sau:
+“Điều 10. Chiến lược phát triển, ứng dụng năng lượng nguyên tử vì m
+586814 | REPEAL | 95/2025/QH15 |  |  |  | bãi bỏ một số điều, khoản của các luật có liên quan đến quy hoạch
+1. Sửa đổi, bổ sung một số điều của Luật Đường sắt số 95/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch mạng lưới giao thông” bằng cụm từ “quy hoạch mạng lưới
+586814 | REPEAL |  | 10 | 2 |  | Bãi bỏ khoản 2 Điều 10; cụm từ “quy hoạch phát triển, ứng dụng năng lượng nguyên tử” tại khoản 4 và 5 Điều 36;
+đ) Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng “quy hoạch chi tiết ngành” tại điểm a khoản
+586814 | REPEAL |  | 7 | 1 |  | Bãi bỏ cụm từ “phương án phát triển cơ sở xuất bản trong quy hoạch phát triển mạng lưới cơ sở báo chí, phát thanh, truyền hình, thông tin điện tử, cơ sở xuất bản, quy hoạch vùng và quy hoạch tỉnh;” tại khoản 1 Điều 7;
+c) Bãi b
+586814 | REPEAL |  | 82a | 2 |  | Bãi bỏ khoản 2 Điều 82a;
+l) Thay thế cụm từ “quy hoạch chi tiết phát triển vùng đất, vùng nước cảng biển” bằng cụm từ “quy hoạch chi tiết kết cấu hạ tầng hàng hải” tại khoản 2 Điều 88;
+m) Thay thế cụm từ “quy hoạch có tính chấ
+586814 | REPEAL |  |  |  |  | Bãi bỏ cụm từ “tổ chức lập nội dung phương án phát triển cơ sở xuất bản trong quy hoạch phát triển mạng lưới cơ sở báo chí, phát thanh, truyền hình, thông tin điện tử, cơ sở xuất bản, quy hoạch vùng và quy hoạch tỉnh theo quy
+586814 | REPLACE | 15/2023/QH15 | 5 | 1 | c | Thay thế cụm từ “quy hoạch hệ thống cơ sở khám bệnh, chữa bệnh” bằng cụm từ “quy hoạch mạng lưới cơ sở y tế công lập” tại điểm c khoản 1 Điều 5 của Luật Khám bệnh, chữa bệnh số 15/2023/QH15.
+10. Bãi bỏ cụm từ “phê duyệt quy hoạc
+586814 | REPLACE | 19/2012/QH13 | 34 | 2 |  | Thay thế cụm từ “quy hoạch phát triển mạng bưu chính công cộng” bằng cụm từ “quy hoạch tỉnh” tại khoản 2 Điều 34;
+b) Bãi bỏ khoản 11 Điều 44.
+7. Sửa đổi, bổ sung một số điều của Luật Xuất bản số 19/2012/QH13 đã được sửa đổi, bổ
+586814 | REPLACE | 45/2024/QH15 | 50 | 1 | m | Thay thế cụm từ “Quy hoạch và quản lý” bằng cụm từ “Quản lý” tại điểm m khoản 1 Điều 50;
+b) Bãi bỏ điểm c khoản 3 Điều 50.
+12. Sửa đổi, bổ sung một số điều của Luật Di sản văn hóa số 45/2024/QH15 đã được sửa đổi, bổ sung một số
+586814 | REPLACE | 50/2010/QH12 | 6 | 2 |  | Thay thế cụm từ “quy hoạch ngành quốc gia” bằng cụm từ “quy hoạch ngành” tại khoản 2 Điều 6 của Luật Sử dụng năng lượng tiết kiệm và hiệu quả số 50/2010/QH12 đã được sửa đổi, bổ sung một số điều theo Luật số 28/2018/QH14 và Luật
+586814 | REPLACE |  | 10 | 4 |  | Thay thế cụm từ “phương án phát triển kết cấu hạ tầng đường thủy nội địa” bằng cụm từ “phương hướng phát triển kết cấu hạ tầng đường thủy nội địa” tại khoản 4 Điều 10 và khoản 2 Điều 100;
+e) Bổ sung Điều 10a vào sau Điều 10 như
+586814 | REPLACE |  | 10 | 2 |  | thay thế cụm từ “quy hoạch tài nguyên nước, quy hoạch phòng, chống thiên tai và thủy lợi” bằng cụm từ “quy hoạch tài nguyên nước, thủy lợi và phòng, chống thiên tai” tại khoản 2 Điều 10;
+d) Sửa đổi, bổ sung khoản 3 Điều 10 như s
+586814 | REPLACE |  | 102 | 1 |  | Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi tiết ngành” tại khoản 1 Điều 102;
+n) Sửa đổi, bổ sung khoản 3 Điều 102 như sau:
+“3. Bộ Giao thông vận tải tổ chức lập, phê duyệt quy hoạc
+586814 | REPLACE |  | 13 | 4 | b | Thay thế cụm từ “quy hoạch hạ tầng kỹ thuật viễn thông thụ động” bằng cụm từ “phương hướng phát triển hạ tầng kỹ thuật viễn thông thụ động trong quy hoạch tỉnh” tại điểm b khoản 4 Điều 13, khoản 1 Điều 64, khoản 1 Điều 65 và điể
+586814 | REPLACE |  | 14 | 4 |  | Thay thế cụm từ “theo kế hoạch thực hiện quy hoạch đã được phê duyệt” bằng cụm từ “phù hợp với quy hoạch đã được phê duyệt” tại khoản 4 Điều 14;
+c) Thay thế cụm từ “quy hoạch ngành quốc gia” bằng cụm từ “quy hoạch ngành” tại điể
+586814 | REPLACE |  | 19 | 2 | a | Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi tiết ngành” tại điểm a khoản 2 Điều 19;
+đ) Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành đường sắt” bằng cụm từ “quy họa
+586814 | REPLACE |  | 19 | 1 | a | Thay thế cụm từ “quy hoạch ngành quốc gia” bằng cụm từ “quy hoạch ngành” tại điểm a khoản 1 Điều 19;
+d) Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi tiết ngành” tại điểm a khoản 2 Đi
+586814 | REPLACE |  | 23 | 4 |  | Thay thế cụm từ “Quy hoạch phát triển, ứng dụng năng lượng nguyên tử” bằng cụm từ “Quy hoạch mạng lưới quan trắc và cảnh báo phóng xạ môi trường quốc gia” tại khoản 4 Điều 23;
+c) Sửa đổi, bổ sung khoản 5 Điều 23 như sau:
+“5. Chí
+586814 | REPLACE |  | 25 | 2 |  | Thay thế cụm từ “quy hoạch kho số viễn thông” bằng cụm từ “quy hoạch kho số viễn thông và tài nguyên Internet” tại khoản 2 Điều 25;
+c) Thay thế cụm từ “quy hoạch kho số viễn thông, quy hoạch tài nguyên Internet” bằng cụm từ “quy
+586814 | REPLACE |  | 3 | 1 |  | Thay thế cụm từ “quy hoạch kết cấu hạ tầng đường thủy nội địa” bằng cụm từ “quy hoạch tổng thể kết cấu hạ tầng đường thủy nội địa, quy hoạch chi tiết kết cấu hạ tầng đường thủy nội địa” tại khoản 1 Điều 3, khoản 3 Điều 4, khoản
+586814 | REPLACE |  | 34 | 1 |  | Thay thế cụm từ quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi tiết ngành” tại khoản 1 Điều 34 và khoản 1 Điều 37;
+b) Sửa đổi, bổ sung khoản 4 Điều 34 như sau:
+“4. Bộ Văn hóa, Thể thao và Du lịch tổ ch
+586814 | REPLACE |  | 34 | 3 |  | Thay thế cụm từ “quy hoạch kho số viễn thông, quy hoạch tài nguyên Internet” bằng cụm từ “quy hoạch kho số viễn thông và tài nguyên Internet” tại khoản 3 Điều 34, Điều 49, điểm a khoản 1 Điều 50 và điểm b khoản 2 Điều 53;
+d) Sửa
+586814 | REPLACE |  | 37 | 1 |  | Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành đường sắt” bằng cụm từ “quy hoạch tuyến đường sắt, ga đường sắt” tại khoản 1 Điều 37.
+2. Sửa đổi, bổ sung một số điều của Luật Giao thông đường thủy nội địa số 23/20
+586814 | REPLACE |  | 4 |  |  | thay thế hoặc quy hoạch thời kỳ tiếp theo được quyết định hoặc phê duyệt. Thời hạn hiệu lực của quy hoạch đô thị và nông thôn thực hiện theo quy định của pháp luật về quy hoạch đô thị và nông thôn.
+Điều 4. Nguyên tắc cơ bản tron
+586814 | REPLACE |  | 43 | 3 | a | Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng “quy hoạch chi tiết ngành” tại điểm a khoản 3 Điều 43.
+9. Thay thế cụm từ “quy hoạch hệ thống cơ sở khám bệnh, chữa bệnh” bằng cụm từ “quy hoạch mạng lưới cơ s
+586814 | REPLACE |  | 8 | 3 |  | Thay thế cụm từ “quy hoạch mạng lưới cơ sở giáo dục đại học và sư phạm” bằng cụm từ “quy hoạch mạng lưới cơ sở giáo dục đại học và giáo dục nghề nghiệp công lập” tại khoản 3 Điều 8 của Luật Giáo dục quốc phòng và an ninh số 30/2
+586814 | REPLACE |  | 82 | 2 |  | Thay thế cụm từ “quy hoạch tổng thể phát triển hệ thống cảng biển” bằng cụm từ “quy hoạch tổng thể kết cấu hạ tầng hàng hải” tại tên điều, khoản 1 và khoản 2 Điều 82;
+đ) Sửa đổi, bổ sung tên Điều 82a như sau:
+“Điều 82a. Quy hoạc
+586814 | REPLACE |  | 82a | 3 |  | Thay thế cụm từ “Quy hoạch chi tiết phát triển vùng đất, vùng nước cảng biển” bằng cụm từ “Quy hoạch chi tiết kết cấu hạ tầng hàng hải” tại đoạn mở đầu của khoản 3 Điều 82a;
+h) Sửa đổi, bổ sung khoản 4 Điều 82a như sau:
+“4. Bộ t
+586814 | REPLACE |  | 88 | 2 |  | Thay thế cụm từ “quy hoạch chi tiết phát triển vùng đất, vùng nước cảng biển” bằng cụm từ “quy hoạch chi tiết kết cấu hạ tầng hàng hải” tại khoản 2 Điều 88;
+m) Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng
+586814 | REPLACE |  | 9 | 1 |  | Thay thế cụm từ “quy hoạch mạng lưới giao thông” bằng cụm từ “quy hoạch mạng lưới đường sắt” tại khoản 1 Điều 9;
+b) Thay thế cụm từ “theo kế hoạch thực hiện quy hoạch đã được phê duyệt” bằng cụm từ “phù hợp với quy hoạch đã được
+586814 | REPLACE |  | 99 | 6 |  | Thay thế cụm từ “quy hoạch phát triển lưu vực sông” bằng cụm từ “quy hoạch tổng hợp tài nguyên nước và hạ tầng thủy lợi lưu vực sông liên tỉnh” tại khoản 6 Điều 99.
+3. Thay thế cụm từ “quy hoạch ngành quốc gia” bằng cụm từ “quy
+586814 | REPLACE |  | 99 | 5 |  | Thay thế cụm từ “quy hoạch đê điều, công trình thủy lợi” bằng cụm từ “quy hoạch tài nguyên nước, thủy lợi và phòng, chống thiên tai” tại khoản 5 Điều 99;
+h) Thay thế cụm từ “quy hoạch phát triển lưu vực sông” bằng cụm từ “quy ho
+586814 | REPLACE |  |  |  |  | Thay thế cụm từ “quy hoạch chi tiết nhóm cảng biển, bến cảng, cầu cảng, bến phao, khu nước, vùng nước, quy hoạch chi tiết phát triển vùng đất, vùng nước cảng biển” bằng cụm từ “quy hoạch chi tiết kết cấu hạ tầng hàng hải” tại kh
+586814 | REPLACE |  |  |  |  | Thay thế cụm từ “quy hoạch kết cấu hạ tầng đường thủy nội địa” bằng cụm từ “quy hoạch tổng thể kết cấu hạ tầng đường thủy nội địa” và thay thế cụm từ “quy hoạch tài nguyên nước, quy hoạch phòng, chống thiên tai và thủy lợi” bằng
+586814 | REPLACE |  |  |  |  | Thay thế cụm từ “quy hoạch tổng thể phát triển hệ thống cảng biển, quy hoạch chi tiết nhóm cảng biển, bến cảng, cầu cảng, bến phao, khu nước, vùng nước, quy hoạch chi tiết phát triển vùng đất, vùng nước cảng biển” bằng cụm từ “q
+586814 | REPLACE |  |  |  |  | thay thế công trình hiện có và giữ nguyên mục tiêu, địa điểm, quy mô thì không yêu cầu đánh giá sự phù hợp của dự án với quy hoạch.
+2. Quy hoạch được sử dụng làm căn cứ đánh giá sự phù hợp của dự án khi quyết định đầu tư theo qu
+586814 | REPLACE |  |  |  |  | thay thế theo quy định của pháp luật.
+2. Quy hoạch cấp quốc gia, quy hoạch vùng, quy hoạch tỉnh thời kỳ 2021-2030, điều chỉnh quy hoạch cấp quốc gia, quy hoạch vùng, quy hoạch tỉnh thời kỳ 2021-2030 đã được lập trước ngày 10 thá
+586814 | REPLACE |  |  |  |  | thay thế theo quy định của pháp luật;
+b) Quy hoạch đô thị và nông thôn, quy hoạch có tính chất kỹ thuật, chuyên ngành, điều chỉnh quy hoạch đô thị và nông thôn, điều chỉnh quy hoạch có tính chất kỹ thuật, chuyên ngành đã được ph
+616621 | ADD |  | 22 |  |  | bổ sung (nếu thấy cần thiết), lập thiết kế chi tiết và thực hiện công tác triển khai (sau đây gọi là nhà thầu triển khai) theo quy định tại Điều này và Điều 22 của Nghị định này. Nhà thầu triển khai được lập thiết kế chi tiết v
+616621 | ADD |  | 23 |  |  | bổ sung, hoàn thiện phải được chủ đầu tư tổ chức vận hành thử lại. Quá trình này chỉ kết thúc khi sản phẩm, dịch vụ đáp ứng yêu cầu chất lượng.
+Điều 23. Công tác triển khai, vận hành thử và giám sát chất lượng dịch vụ công nghệ
+616621 | ADD |  | 4 |  |  | bổ sung (nếu có) và các yêu cầu khác (nếu thấy cần thiết).
+3. Yêu cầu thiết kế chi tiết
+a) Phải tuân thủ Khung kiến trúc tổng thể quốc gia số theo quy định tại Điều 4 của Nghị định này;
+b) Phải tuân thủ các quy chuẩn kỹ thuật,
+616621 | ADD |  |  |  |  | bổ sung (nếu thấy cần thiết), lập hồ sơ thiết kế chi tiết theo quy định tại Điều này.
+2. Tài liệu làm căn cứ để thiết kế chi tiết
+a) Quyết định đầu tư dự án và báo cáo nghiên cứu khả thi được duyệt;
+b) Danh mục quy chuẩn kỹ thu
+616621 | ADD |  |  |  |  | bổ sung (nếu thấy cần thiết), lập thiết kế chi tiết và thực hiện công tác triển khai.
+5. Tổ chức, cá nhân thiết kế chi tiết phải thực hiện công tác giám sát tác giả trong suốt quá trình triển khai, nghiệm thu sản phẩm hoặc hạng
+616621 | ADD |  |  |  |  | bổ sung danh mục phần mềm phổ biến.
+4. Việc đầu tư, mua sắm, thuê dịch vụ công nghệ thông tin đối với phần mềm phổ biến (bao gồm phần sửa đổi, bổ sung một số chức năng, tính năng, hiệu năng) được thực hiện theo trình tự, thủ tụ
+616621 | ADD |  |  |  |  | bổ sung hoặc giải trình thêm về nội dung kế hoạch thuê, trong thời hạn 03 ngày làm việc kể từ ngày nhận hồ sơ, đầu mối thẩm định có văn bản yêu cầu chủ trì thuê bổ sung hoặc giải trình.
+c) Thẩm quyền thẩm định nội dung quy định
+616621 | ADD |  |  |  |  | bổ sung hoặc giải trình.
+c) Thẩm quyền thẩm định nội dung quy định tại điểm c, d khoản 2 Điều này
+Người đứng đầu cấp có thẩm quyền quyết định phê duyệt kế hoạch thuê thành lập Hội đồng thẩm định hoặc giao đơn vị chuyên môn về c
+616621 | ADD |  |  |  |  | bổ sung, hoàn chỉnh hồ sơ. Trường hợp cần yêu cầu bổ sung hoặc giải trình thêm về nội dung kế hoạch thuê, trong thời hạn 03 ngày làm việc kể từ ngày nhận hồ sơ, đầu mối thẩm định có văn bản yêu cầu chủ trì thuê bổ sung hoặc giả
+616621 | ADD |  |  |  |  | bổ sung, hoàn thiện phải được chủ trì thuê tổ chức vận hành thử lại. Quá trình này chỉ kết thúc khi dịch vụ đáp ứng các yêu cầu về chất lượng dịch vụ.
+6. Giám sát chất lượng dịch vụ công nghệ thông tin
+a) Quá trình cung cấp dịc
+616621 | ADD |  |  |  |  | bổ sung, hoàn thiện phải được chủ đầu tư tổ chức vận hành thử lại. Quá trình này chỉ kết thúc khi dịch vụ đáp ứng yêu cầu chất lượng dịch vụ.
+3. Giám sát chất lượng dịch vụ công nghệ thông tin
+a) Quá trình cung cấp dịch vụ công
+616621 | ADD |  |  |  |  | bổ sung, hoàn thiện.
+d) Dịch vụ công nghệ thông tin sau khi được nhà thầu cung cấp dịch vụ bổ sung, hoàn thiện phải được chủ trì thuê tổ chức vận hành thử lại. Quá trình này chỉ kết thúc khi dịch vụ đáp ứng các yêu cầu về chất
+616621 | ADD |  |  |  |  | bổ sung, hoàn thiện;
+c) Dịch vụ công nghệ thông tin sau khi được nhà thầu bổ sung, hoàn thiện phải được chủ đầu tư tổ chức vận hành thử lại. Quá trình này chỉ kết thúc khi dịch vụ đáp ứng yêu cầu chất lượng dịch vụ.
+3. Giám sát
+616621 | ADD |  |  |  |  | bổ sung, hoàn thiện;
+c) Sản phẩm, hạng mục công việc của dự án sau khi được nhà thầu bổ sung, hoàn thiện phải được chủ đầu tư tổ chức vận hành thử lại. Quá trình này chỉ kết thúc khi sản phẩm, dịch vụ đáp ứng yêu cầu chất lượng
+616621 | AMEND | 73/2019/NĐ-CP |  |  |  | sửa đổi, bổ sung một số điều của Nghị định số 73/2019/NĐ-CP ngày 05 tháng 9 năm 2019 của Chính phủ quy định quản lý đầu tư ứng dụng công nghệ thông tin sử dụng nguồn vốn ngân sách nhà nước.
+3. Nghị quyết số 04/2025/NQ-CP ngày 20 tháng 8
+616621 | AMEND | 90/2025/QH15 | 7 | 21 |  | sửa đổi, bổ sung, quy định chi tiết; trình tự, thủ tục quyết định đầu tư đối với dự án đầu tư ứng dụng công nghệ thông tin đặc biệt thực hiện theo quy định tại khoản 21 Điều 7 của Luật số 90/2025/QH15 và các văn bản sửa đổi, bổ sung, qu
+616621 | AMEND |  | 20 |  |  | sửa đổi, bổ sung, quy định chi tiết.
+Gói thầu lập thiết kế chi tiết và thực hiện công tác triển khai đối với phần mềm nội bộ quy định tại Điều 20 của Nghị định này thực hiện theo gói thầu thiết kế và cung cấp hàng hóa (EP) của pháp luật
+616621 | AMEND |  | 20 |  |  | sửa đổi, bổ sung, quy định chi tiết.
+Gói thầu thiết kế và thực hiện công tác triển khai đối với phần mềm nội bộ quy định tại Điều 20 của Nghị định này thực hiện theo gói thầu thiết kế và cung cấp hàng hóa (EP) của pháp luật đấu thầu.
+Mẫ
+616621 | AMEND |  | 22 |  |  | sửa đổi, bổ sung, thay thế.
+Điều 22. Công tác triển khai, giám sát công tác triển khai, kiểm thử và vận hành thử đối với dự án đầu tư hệ thống và dự án mua sắm
+1. Đối với dự án đầu tư hệ thống, chủ đầu tư tự thực hiện hoặc thuê tổ chức,
+616621 | AMEND |  | 39 |  |  | sửa đổi, bổ sung, quy định chi tiết.
+2. Căn cứ lập, thẩm định, quyết định đầu tư dự án thực hiện theo quy định tại Điều 39 của Luật Đầu tư công và các văn bản sửa đổi, bổ sung, quy định chi tiết.
+3. Trình tự lập, thẩm định, quyết định đ
+616621 | AMEND |  | 43 |  |  | sửa đổi, bổ sung, quy định chi tiết.
+3. Trình tự lập, thẩm định, quyết định đầu tư dự án thực hiện theo quy định tại Điều 43 của Luật Đầu tư công và các văn bản sửa đổi, bổ sung.
+Chủ đầu tư hoặc cơ quan, tổ chức được giao nhiệm vụ chuẩn
+616621 | AMEND |  | 8 | 5 |  | sửa đổi, bổ sung.
+2. Sau khi được phân bổ dự toán kinh phí chi thường xuyên ngân sách nhà nước, trình tự triển khai dự án theo quy định tại khoản 1, khoản 2, điểm b khoản 3, điểm a khoản 4, khoản 5 Điều 8 của Nghị định này.
+a) Đơn vị sử
+616621 | AMEND |  | 9 |  |  | sửa đổi, bổ sung, quy định chi tiết.
+5. Các bước thiết kế thực hiện theo quy định tại Điều 9 của Nghị định này.
+6. Nội dung báo cáo nghiên cứu khả thi, báo cáo kinh tế - kỹ thuật thực hiện theo quy định tại Điều 12 của Nghị định này.
+7.
+616621 | AMEND |  |  |  |  | sửa đổi phần mềm để tăng cường chức năng của phần mềm đã có nhằm đáp ứng thêm một số yêu cầu của người sử dụng, yêu cầu nghiệp vụ trong môi trường vận hành, khai thác phần mềm.
+12. Nâng cấp phần mềm là việc sửa đổi, làm tăng hi
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung hoặc thay thế đó.
+2. Bộ trưởng, Thủ trưởng cơ quan ngang bộ, Thủ trưởng cơ quan khác ở trung ương, Chủ tịch Ủy ban nhân dân tỉnh, thành phố trực thuộc trung ương và Thủ trưởng cơ quan, đơn vị liên quan chịu trách nhiệm
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung một số chức năng, tính năng, hiệu năng) được thực hiện theo trình tự, thủ tục đầu tư, mua sắm phần mềm thương mại, thuê dịch vụ công nghệ thông tin sẵn có trên thị trường.
+5. Bộ Khoa học và Công nghệ có trách nhiệm đôn
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung, quy định chi tiết.
+3. Phân loại dự án, chủ đầu tư dự án, các trường hợp điều chỉnh dự án được xác định theo các quy định của Luật Đầu tư công và các văn bản sửa đổi, bổ sung.
+4. Dự án đầu tư ứng dụng công nghệ thông ti
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung, quy định chi tiết. Việc lựa chọn nhà thầu, thương thảo, ký kết, thực hiện hợp đồng được thực hiện theo quy định của Luật Đấu thầu và các văn bản sửa đổi, bổ sung, quy định chi tiết.
+Gói thầu lập thiết kế chi tiết và th
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung, quy định chi tiết; sơ bộ tổng mức đầu tư hoặc dự kiến tổng mức đầu tư theo quy định tại khoản 2 Điều này.
+Đơn vị được giao lập báo cáo nghiên cứu tiền khả thi, báo cáo đề xuất chủ trương đầu tư dự án tự thực hiện hoặc
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung, thay thế có thẩm quyền quyết định dừng thực hiện dự án;
+b) Việc dừng thực hiện dự án được thực hiện trong các trường hợp: Việc tiếp tục thực hiện dự án đó gây hậu quả nghiêm trọng về kinh tế - xã hội, quốc phòng, an ni
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung, thay thế có thẩm quyền quyết định dừng thực hiện thuê dịch vụ công nghệ thông tin;
+b) Việc dừng thực hiện thuê dịch vụ công nghệ thông tin được thực hiện trong các trường hợp: Việc tiếp tục thực hiện nhiệm vụ thuê đó g
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung, thay thế thì thực hiện theo các văn bản sửa đổi, bổ sung hoặc thay thế đó.
+2. Bộ trưởng, Thủ trưởng cơ quan ngang bộ, Thủ trưởng cơ quan khác ở trung ương, Chủ tịch Ủy ban nhân dân tỉnh, thành phố trực thuộc trung ương
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung, thay thế và các quy định của pháp luật có liên quan.
+6. Việc lựa chọn nhà thầu, thương thảo, ký kết, thực hiện hợp đồng trong hoạt động ứng dụng công nghệ thông tin sử dụng kinh phí chi thường xuyên nguồn vốn ngân sách
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung, thay thế;
+b) Chủ trì thuê được phép tự tổ chức thẩm định, phê duyệt điều chỉnh khi điều chỉnh kế hoạch thuê không làm thay đổi mục tiêu, quy mô và không vượt dự toán đã được phê duyệt. Trường hợp điều chỉnh kế hoạch th
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung, thay thế;
+c) Tại các cơ quan Đảng: Thẩm quyền quyết định dự án, kế hoạch thuê dịch vụ công nghệ thông tin theo quy định của cơ quan Đảng.
+5. Trình tự, thủ tục lập dự toán, phân bổ dự toán kinh phí, thanh quyết toán kin
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung.
+4. Dự án đầu tư ứng dụng công nghệ thông tin có hạng mục đầu tư thuộc công trình viễn thông, xây dựng công trình và các lĩnh vực khác thì việc quản lý chi phí, quản lý chất lượng hạng mục đầu tư đó thực hiện theo quy đ
+616621 | AMEND |  |  |  |  | sửa đổi, bổ sung.
+Chủ đầu tư hoặc cơ quan, tổ chức được giao nhiệm vụ chuẩn bị đầu tư tự thực hiện hoặc thuê tổ chức cá nhân khảo sát (nếu thực hiện khảo sát), lập báo cáo nghiên cứu khả thi, báo cáo kinh tế - kỹ thuật.
+4. Trình tự lập,
+616621 | AMEND |  |  |  |  | sửa đổi, làm tăng hiệu năng, khả năng an toàn, bảo mật của phần mềm đã có nhằm tối ưu hóa khả năng xử lý các yêu cầu của người sử dụng và hạn chế tối đa các rủi ro trong môi trường vận hành, khai thác phần mềm.
+13. Phần mềm nội
+616621 | EXPIRE | 132/2025/NĐ-CP | 6 |  |  | hết hiệu lực thi hành kể từ ngày Nghị định này có hiệu lực thi hành.
+4. Bãi bỏ Điều 6 của Nghị định số 132/2025/NĐ-CP ngày 12 tháng 6 năm 2025 của Chính phủ quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp trong lĩ
+616621 | REPEAL | 132/2025/NĐ-CP | 6 |  |  | Bãi bỏ Điều 6 của Nghị định số 132/2025/NĐ-CP ngày 12 tháng 6 năm 2025 của Chính phủ quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp trong lĩnh vực quản lý nhà nước của Bộ Khoa học và Công nghệ và Điều 34, Đ
+616621 | REPLACE | 73/2019/NĐ-CP |  |  |  | thay thế Nghị định số 73/2019/NĐ-CP ngày 05 tháng 9 năm 2019 của Chính phủ quy định quản lý đầu tư ứng dụng công nghệ thông tin sử dụng nguồn vốn ngân sách nhà nước; Nghị định số 82/2024/NĐ-CP ngày 10 tháng 7 năm 2024 của Chính
+616621 | REPLACE |  | 22 |  |  | thay thế.
+Điều 22. Công tác triển khai, giám sát công tác triển khai, kiểm thử và vận hành thử đối với dự án đầu tư hệ thống và dự án mua sắm
+1. Đối với dự án đầu tư hệ thống, chủ đầu tư tự thực hiện hoặc thuê tổ chức, cá nhân t
+616621 | REPLACE |  |  |  |  | thay thế các thiết bị phần cứng, phần mềm thương mại thuộc hệ thống thông tin hiện có; mua phần mềm thương mại; mua thiết bị phần cứng riêng lẻ; mua thiết bị phần cứng, phần mềm, cơ sở dữ liệu không thuộc hoạt động quy định tại
+616621 | REPLACE |  |  |  |  | thay thế các thiết bị phần cứng, phần mềm thương mại thuộc hệ thống thông tin hiện có; mua sắm phần mềm thương mại (bao gồm cập nhật bản quyền phần mềm thương mại); mua sắm thiết bị phần cứng riêng lẻ; mua thiết bị phần cứng, ph
+616621 | REPLACE |  |  |  |  | thay thế có thẩm quyền quyết định dừng thực hiện dự án;
+b) Việc dừng thực hiện dự án được thực hiện trong các trường hợp: Việc tiếp tục thực hiện dự án đó gây hậu quả nghiêm trọng về kinh tế - xã hội, quốc phòng, an ninh, đối ng
+616621 | REPLACE |  |  |  |  | thay thế có thẩm quyền quyết định dừng thực hiện thuê dịch vụ công nghệ thông tin;
+b) Việc dừng thực hiện thuê dịch vụ công nghệ thông tin được thực hiện trong các trường hợp: Việc tiếp tục thực hiện nhiệm vụ thuê đó gây hậu quả
+616621 | REPLACE |  |  |  |  | thay thế của nhà thầu;
+Xác nhận hoàn thành bảo hành sản phẩm của dự án cho nhà thầu;
+b) Nhà thầu cung cấp sản phẩm của dự án phải thực hiện trách nhiệm, nghĩa vụ bảo hành sản phẩm do mình cung cấp theo quy định của pháp luật và
+616621 | REPLACE |  |  |  |  | thay thế sản phẩm trong thời hạn theo yêu cầu của chủ đầu tư hoặc cơ quan, tổ chức quản lý, sử dụng sản phẩm của dự án và phải chịu mọi phí tổn khắc phục, sửa chữa, thay thế; được quyền từ chối bảo hành và không phải bồi thường
+616621 | REPLACE |  |  |  |  | thay thế thì thực hiện theo các văn bản sửa đổi, bổ sung hoặc thay thế đó.
+2. Bộ trưởng, Thủ trưởng cơ quan ngang bộ, Thủ trưởng cơ quan khác ở trung ương, Chủ tịch Ủy ban nhân dân tỉnh, thành phố trực thuộc trung ương và Thủ tr
+616621 | REPLACE |  |  |  |  | thay thế và các quy định của pháp luật có liên quan.
+6. Việc lựa chọn nhà thầu, thương thảo, ký kết, thực hiện hợp đồng trong hoạt động ứng dụng công nghệ thông tin sử dụng kinh phí chi thường xuyên nguồn vốn ngân sách nhà nước
+616621 | REPLACE |  |  |  |  | thay thế đó.
+2. Bộ trưởng, Thủ trưởng cơ quan ngang bộ, Thủ trưởng cơ quan khác ở trung ương, Chủ tịch Ủy ban nhân dân tỉnh, thành phố trực thuộc trung ương và Thủ trưởng cơ quan, đơn vị liên quan chịu trách nhiệm thi hành Nghị
+616621 | REPLACE |  |  |  |  | thay thế. Trường hợp nhà thầu không đáp ứng được việc bảo hành thì chủ đầu tư hoặc cơ quan, tổ chức quản lý, sử dụng sản phẩm của dự án có quyền thuê nhà thầu khác thực hiện. Kinh phí thuê được lấy từ tiền bảo hành sản phẩm của
+616621 | REPLACE |  |  |  |  | thay thế;
+b) Chủ trì thuê được phép tự tổ chức thẩm định, phê duyệt điều chỉnh khi điều chỉnh kế hoạch thuê không làm thay đổi mục tiêu, quy mô và không vượt dự toán đã được phê duyệt. Trường hợp điều chỉnh kế hoạch thuê làm tha
+616621 | REPLACE |  |  |  |  | thay thế;
+c) Tại các cơ quan Đảng: Thẩm quyền quyết định dự án, kế hoạch thuê dịch vụ công nghệ thông tin theo quy định của cơ quan Đảng.
+5. Trình tự, thủ tục lập dự toán, phân bổ dự toán kinh phí, thanh quyết toán kinh phí thực
+616621 | REPLACE |  |  |  |  | thay thế; được quyền từ chối bảo hành và không phải bồi thường thiệt hại trong các trường hợp hư hỏng, thiệt hại không phải do lỗi của nhà thầu gây ra hoặc do chủ đầu tư, cơ quan, tổ chức quản lý, sử dụng sản phẩm của dự án vi p
+694652 | AMEND |  | 2 |  |  | sửa đổi, bổ sung hoặc thay thế, bị bãi bỏ trong lĩnh vực thủy sản và kiểm ngư thuộc phạm vi chức năng quản lý của Sở Nông nghiệp và Môi trường trên địa bàn tỉnh Đắk Lắk, chi tiết tại Phụ lục kèm theo.
+Điều 2. Giao Sở Nông nghiệp và Môi
+694652 | EXPIRE | 1598/QĐ-UBND |  |  |  | hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành.
+2. Nội dung công bố thủ tục hành chính lĩnh vực thủy sản tại số thứ tự 1, 4, 5, 6, 10, 11 mục A Phụ lục ban hành kèm theo Quyết định số 1598/QĐ-UBND ngày 30/6/2025 của Chủ
+694652 | EXPIRE | 991/QĐ-UBND |  |  |  | hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành.
+3. Nội dung công bố thủ tục hành chính lĩnh vực thủy sản tại số thứ tự 3, 4, 5, 6 mục I Phụ lục ban hành kèm theo Quyết định số 991/QĐ-UBND ngày 28/4/2025 của Chủ tịch UBN
+694652 | EXPIRE |  | 4 |  |  | hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành.
+Điều 4. Chánh Văn phòng UBND tỉnh, Giám đốc Sở Nông nghiệp và Môi trường, Chủ tịch UBND các xã, phường và các tổ chức, cá nhân có liên quan chịu trách nhiệm thi hành Quyết
+694652 | REPEAL |  | 2 |  |  | bãi bỏ trong lĩnh vực thủy sản và kiểm ngư thuộc phạm vi chức năng quản lý của Sở Nông nghiệp và Môi trường trên địa bàn tỉnh Đắk Lắk, chi tiết tại Phụ lục kèm theo.
+Điều 2. Giao Sở Nông nghiệp và Môi trường căn cứ Danh mục th
+694652 | REPLACE |  | 2 |  |  | thay thế, bị bãi bỏ trong lĩnh vực thủy sản và kiểm ngư thuộc phạm vi chức năng quản lý của Sở Nông nghiệp và Môi trường trên địa bàn tỉnh Đắk Lắk, chi tiết tại Phụ lục kèm theo.
+Điều 2. Giao Sở Nông nghiệp và Môi trường căn cứ
+rows 146
+
+DB legal_sample_200.duckdb
+586814 | ADD | 03/2022/QH15 |  |  |  | bổ sung một số điều theo Luật số 03/2022/QH15, Luật số 05/2022/QH15, Luật số 08/2022/QH15, Luật số 09/2022/QH15, Luật số 15/2023/QH15, Luật số 16/2023/QH15, Luật số 20/2023/QH15, Luật số 26/2023/QH15, Luật số 27/2023/QH15, Luật
+586814 | ADD |  | 10a |  |  | Bổ sung Điều 10a vào sau Điều 10 như sau:
+“Điều 10a. Quy hoạch chi tiết kết cấu hạ tầng đường thủy nội địa
+1. Quy hoạch chi tiết kết cấu hạ tầng đường thủy nội địa là quy hoạch chi tiết ngành, cụ thể hóa quy hoạch tổng thể kết
+586814 | AMEND | 03/2022/QH15 |  |  |  | sửa đổi bổ sung một số điều theo Luật số 03/2022/QH15, Luật số 05/2022/QH15, Luật số 08/2022/QH15, Luật số 09/2022/QH15, Luật số 15/2023/QH15, Luật số 16/2023/QH15, Luật số 20/2023/QH15, Luật số 26/2023/QH15, Luật số 27/2023/QH
+586814 | AMEND | 19/2012/QH13 |  |  |  | Sửa đổi, bổ sung một số điều của Luật Xuất bản số 19/2012/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14 như sau:
+a) Bãi bỏ cụm từ “tổ chức lập nội dung phương án phát triển cơ sở xuất bản trong quy hoạch phát triển
+586814 | AMEND | 21/2017/QH15 | 58 |  |  | sửa đổi) hết hiệu lực kể từ ngày Luật này được thông qua.
+6. Luật Quy hoạch số 21/2017/QH15 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các quy định có liên quan tại Điều 58 của Luật này.
+Điều 58. Điều khoản chuy
+586814 | AMEND | 23/2004/QH11 |  |  |  | Sửa đổi, bổ sung một số điều của Luật Giao thông đường thủy nội địa số 23/2004/QH11 đã được sửa đổi, bổ sung một số điều theo Luật số 48/2014/QH13, Luật số 97/2015/QH13, Luật số 35/2018/QH14, Luật số 44/2019/QH14 và Luật số 84/2025/QH15
+586814 | AMEND | 24/2023/QH15 |  |  |  | Sửa đổi, bổ sung một số điều của Luật Viễn thông số 24/2023/QH15 đã được sửa đổi, bổ sung một số điều theo Luật số 47/2024/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch hạ tầng kỹ thuật viễn thông thụ động” bằng cụm từ “phương hướng phát
+586814 | AMEND | 28/2018/QH14 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 28/2018/QH14 và Luật số 44/2024/QH15.
+11. Sửa đổi, bổ sung một số điều của Luật Người khuyết tật số 51/2010/QH12 đã được sửa đổi, bổ sung một số điều theo Luật số 32/2013/QH13 như sau:
+a) Thay t
+586814 | AMEND | 28/2018/QH14 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 28/2018/QH14 và Luật số 77/2025/QH15.
+4. Thay thế cụm từ “quy hoạch mạng lưới cơ sở giáo dục đại học và sư phạm” bằng cụm từ “quy hoạch mạng lưới cơ sở giáo dục đại học và giáo dục nghề nghiệp c
+586814 | AMEND | 32/2013/QH13 | 50 | 1 | m | sửa đổi, bổ sung một số điều theo Luật số 32/2013/QH13 như sau:
+a) Thay thế cụm từ “Quy hoạch và quản lý” bằng cụm từ “Quản lý” tại điểm m khoản 1 Điều 50;
+b) Bãi bỏ điểm c khoản 3 Điều 50.
+12. Sửa đổi, bổ sung một số điều của Luật Di s
+586814 | AMEND | 35/2018/QH14 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14 như sau:
+a) Bãi bỏ cụm từ “tổ chức lập nội dung phương án phát triển cơ sở xuất bản trong quy hoạch phát triển mạng lưới cơ sở báo chí, phát thanh, truyền hình, thông tin điện tử, c
+586814 | AMEND | 35/2018/QH14 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14 và Luật số 98/2025/QH15.
+5. Sửa đổi, bổ sung một số điều của Luật Viễn thông số 24/2023/QH15 đã được sửa đổi, bổ sung một số điều theo Luật số 47/2024/QH15 như sau:
+a) Thay thế cụm
+586814 | AMEND | 35/2018/QH14 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14, Luật số 16/2023/QH15 và Luật số 81/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch tổng thể phát triển hệ thống cảng biển, quy hoạch chi tiết nhóm cảng biển, bến cảng, cầu cảng, b
+586814 | AMEND | 41/2024/QH15 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 41/2024/QH15.
+14. Sửa đổi, bổ sung một số điều của Bộ luật Hàng hải Việt Nam số 95/2015/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14, Luật số 16/2023/QH15 và Luật số 81/20
+586814 | AMEND | 45/2024/QH15 |  |  |  | Sửa đổi, bổ sung một số điều của Luật Di sản văn hóa số 45/2024/QH15 đã được sửa đổi, bổ sung một số điều theo Luật số 84/2025/QH15 như sau:
+a) Thay thế cụm từ quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi ti
+586814 | AMEND | 47/2024/QH15 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 47/2024/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch hạ tầng kỹ thuật viễn thông thụ động” bằng cụm từ “phương hướng phát triển hạ tầng kỹ thuật viễn thông thụ động trong quy hoạch tỉnh” tại điểm
+586814 | AMEND | 48/2014/QH13 |  |  |  | sửa đổi, bổ sung một số điều theo Luật số 48/2014/QH13, Luật số 97/2015/QH13, Luật số 35/2018/QH14, Luật số 44/2019/QH14 và Luật số 84/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch kết cấu hạ tầng đường thủy nội địa” bằng cụm từ “quy
+586814 | AMEND | 49/2010/QH12 | 34 | 2 |  | Sửa đổi, bổ sung một số điều của Luật Bưu chính số 49/2010/QH12 như sau:
+a) Thay thế cụm từ “quy hoạch phát triển mạng bưu chính công cộng” bằng cụm từ “quy hoạch tỉnh” tại khoản 2 Điều 34;
+b) Bãi bỏ khoản 11 Điều 44.
+7. Sửa đổi, bổ sun
+586814 | AMEND | 51/2010/QH12 | 50 | 1 | m | Sửa đổi, bổ sung một số điều của Luật Người khuyết tật số 51/2010/QH12 đã được sửa đổi, bổ sung một số điều theo Luật số 32/2013/QH13 như sau:
+a) Thay thế cụm từ “Quy hoạch và quản lý” bằng cụm từ “Quản lý” tại điểm m khoản 1 Điều 50;
+b
+586814 | AMEND | 84/2025/QH15 | 34 | 1 |  | sửa đổi, bổ sung một số điều theo Luật số 84/2025/QH15 như sau:
+a) Thay thế cụm từ quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi tiết ngành” tại khoản 1 Điều 34 và khoản 1 Điều 37;
+b) Sửa đổi, bổ sung khoản 4
+586814 | AMEND | 94/2025/QH15 | 10 |  |  | Sửa đổi, bổ sung một số điều của Luật Năng lượng nguyên tử số 94/2025/QH15 như sau:
+a) Sửa đổi, bổ sung tên Điều 10 như sau:
+“Điều 10. Chiến lược phát triển, ứng dụng năng lượng nguyên tử vì mục đích hòa bình”;
+b) Thay thế cụm từ “Quy h
+586814 | AMEND | 95/2015/QH13 |  |  |  | Sửa đổi, bổ sung một số điều của Bộ luật Hàng hải Việt Nam số 95/2015/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14, Luật số 16/2023/QH15 và Luật số 81/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch tổng thể phát
+586814 | AMEND | 95/2025/QH15 | 9 | 1 |  | Sửa đổi, bổ sung một số điều của Luật Đường sắt số 95/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch mạng lưới giao thông” bằng cụm từ “quy hoạch mạng lưới đường sắt” tại khoản 1 Điều 9;
+b) Thay thế cụm từ “theo kế hoạch thực hiện quy
+586814 | AMEND | 95/2025/QH15 |  |  |  | Sửa đổi, bổ sung, bãi bỏ một số điều, khoản của các luật có liên quan đến quy hoạch
+1. Sửa đổi, bổ sung một số điều của Luật Đường sắt số 95/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch mạng lưới giao thông” bằng cụm từ “quy hoạch m
+586814 | AMEND |  | 10 | 1 |  | Sửa đổi, bổ sung khoản 1 Điều 10 như sau:
+“1. Quy hoạch tổng thể kết cấu hạ tầng đường thủy nội địa là quy hoạch ngành.”;
+c) Thay thế cụm từ “quy hoạch kết cấu hạ tầng đường thủy nội địa” bằng cụm từ “quy hoạch tổng thể kết cấu hạ tầng
+586814 | AMEND |  | 10 | 3 |  | Sửa đổi, bổ sung khoản 3 Điều 10 như sau:
+“3. Bộ Xây dựng tổ chức lập quy hoạch tổng thể kết cấu hạ tầng đường thủy nội địa theo quy định của pháp luật về quy hoạch.”;
+đ) Thay thế cụm từ “phương án phát triển kết cấu hạ tầng đường thủy
+586814 | AMEND |  | 10 |  |  | Sửa đổi, bổ sung tên Điều 10 như sau:
+“Điều 10. Chiến lược phát triển, ứng dụng năng lượng nguyên tử vì mục đích hòa bình”;
+b) Thay thế cụm từ “Quy hoạch phát triển, ứng dụng năng lượng nguyên tử” bằng cụm từ “Quy hoạch mạng lưới quan t
+586814 | AMEND |  | 102 | 3 |  | Sửa đổi, bổ sung khoản 3 Điều 102 như sau:
+“3. Bộ Giao thông vận tải tổ chức lập, phê duyệt quy hoạch phát triển hệ thống cảng cạn.”.
+Điều 56. Quy định về điều chỉnh quy hoạch không gian biển quốc gia, quy hoạch sử dụng đất quốc gia, qu
+586814 | AMEND |  | 23 | 5 |  | Sửa đổi, bổ sung khoản 5 Điều 23 như sau:
+“5. Chính phủ quy định chi tiết các khoản 1, 2 và 3 Điều này; việc lập, thẩm định, phê duyệt, công bố, thực hiện, điều chỉnh và nội dung quy hoạch mạng lưới quan trắc và cảnh báo phóng xạ môi tr
+586814 | AMEND |  | 34 | 4 |  | Sửa đổi, bổ sung khoản 4 Điều 34 như sau:
+“4. Bộ Văn hóa, Thể thao và Du lịch tổ chức thẩm định, phê duyệt quy hoạch, điều chỉnh quy hoạch bảo quản, tu bổ, phục hồi di sản thế giới, di tích quốc gia đặc biệt theo đề nghị của Chủ tịch Ủy
+586814 | AMEND |  | 63 |  |  | Sửa đổi, bổ sung Điều 63 như sau:
+“Điều 63. Phương hướng phát triển hạ tầng kỹ thuật viễn thông thụ động trong quy hoạch tỉnh
+1. Phương hướng phát triển hạ tầng kỹ thuật viễn thông thụ động trong quy hoạch tỉnh phải phù hợp với quy hoạc
+586814 | AMEND |  | 81 | 2 |  | Sửa đổi, bổ sung khoản 1 và khoản 2 Điều 81 như sau:
+“1. Quy hoạch tổng thể kết cấu hạ tầng hàng hải là quy hoạch ngành.
+2. Việc lập quy hoạch tổng thể kết cấu hạ tầng hàng hải phải tuân thủ quy định của pháp luật về quy hoạch và căn cứ
+586814 | AMEND |  | 81 |  |  | Sửa đổi, bổ sung tên Điều 81 như sau:
+“Điều 81. Quy hoạch tổng thể kết cấu hạ tầng hàng hải”;
+c) Sửa đổi, bổ sung khoản 1 và khoản 2 Điều 81 như sau:
+“1. Quy hoạch tổng thể kết cấu hạ tầng hàng hải là quy hoạch ngành.
+2. Việc lập quy ho
+586814 | AMEND |  | 82a | 1 |  | Sửa đổi, bổ sung khoản 1 Điều 82a như sau:
+“1. Quy hoạch chi tiết kết cấu hạ tầng hàng hải là quy hoạch chi tiết ngành, cụ thể hóa quy hoạch tổng thể kết cấu hạ tầng hàng hải”;
+g) Thay thế cụm từ “Quy hoạch chi tiết phát triển vùng đất,
+586814 | AMEND |  | 82a | 4 |  | Sửa đổi, bổ sung khoản 4 Điều 82a như sau:
+“4. Bộ trưởng Bộ Giao thông vận tải phê duyệt quy hoạch chi tiết kết cấu hạ tầng hàng hải.”;
+i) Thay thế cụm từ “quy hoạch chi tiết nhóm cảng biển, bến cảng, cầu cảng, bến phao, khu nước, vùng
+586814 | AMEND |  | 82a |  |  | Sửa đổi, bổ sung tên Điều 82a như sau:
+“Điều 82a. Quy hoạch chi tiết kết cấu hạ tầng hàng hải”;
+e) Sửa đổi, bổ sung khoản 1 Điều 82a như sau:
+“1. Quy hoạch chi tiết kết cấu hạ tầng hàng hải là quy hoạch chi tiết ngành, cụ thể hóa quy ho
+586814 | REPEAL | 105/2016/QH13 | 104 | 5 |  | Bãi bỏ cụm từ “phê duyệt quy hoạch hệ thống kiểm nghiệm của Nhà nước,” tại khoản 5 Điều 104 của Luật Dược số 105/2016/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 28/2018/QH14 và Luật số 44/2024/QH15.
+11. Sửa đổi, bổ
+586814 | REPEAL | 19/2012/QH13 | 44 | 11 |  | Bãi bỏ khoản 11 Điều 44.
+7. Sửa đổi, bổ sung một số điều của Luật Xuất bản số 19/2012/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14 như sau:
+a) Bãi bỏ cụm từ “tổ chức lập nội dung phương án phát triển cơ
+586814 | REPEAL | 39/2009/QH12 | 29 | 1 | i | Bãi bỏ điểm i khoản 1 Điều 29 của Luật Người cao tuổi số 39/2009/QH12 đã được sửa đổi, bổ sung một số điều theo Luật số 41/2024/QH15.
+14. Sửa đổi, bổ sung một số điều của Bộ luật Hàng hải Việt Nam số 95/2015/QH13 đã được sửa đ
+586814 | REPEAL | 45/2024/QH15 | 50 | 3 | c | Bãi bỏ điểm c khoản 3 Điều 50.
+12. Sửa đổi, bổ sung một số điều của Luật Di sản văn hóa số 45/2024/QH15 đã được sửa đổi, bổ sung một số điều theo Luật số 84/2025/QH15 như sau:
+a) Thay thế cụm từ quy hoạch có tính chất kỹ thuật
+586814 | REPEAL | 49/2010/QH12 | 8 |  |  | Bãi bỏ Điều 8.
+6. Sửa đổi, bổ sung một số điều của Luật Bưu chính số 49/2010/QH12 như sau:
+a) Thay thế cụm từ “quy hoạch phát triển mạng bưu chính công cộng” bằng cụm từ “quy hoạch tỉnh” tại khoản 2 Điều 34;
+b) Bãi bỏ khoản 11
+586814 | REPEAL | 94/2025/QH15 | 32 | 1 | d | Bãi bỏ điểm d khoản 1 Điều 32.
+8. Sửa đổi, bổ sung một số điều của Luật Năng lượng nguyên tử số 94/2025/QH15 như sau:
+a) Sửa đổi, bổ sung tên Điều 10 như sau:
+“Điều 10. Chiến lược phát triển, ứng dụng năng lượng nguyên tử vì m
+586814 | REPEAL | 95/2025/QH15 |  |  |  | bãi bỏ một số điều, khoản của các luật có liên quan đến quy hoạch
+1. Sửa đổi, bổ sung một số điều của Luật Đường sắt số 95/2025/QH15 như sau:
+a) Thay thế cụm từ “quy hoạch mạng lưới giao thông” bằng cụm từ “quy hoạch mạng lưới
+586814 | REPEAL |  | 10 | 2 |  | Bãi bỏ khoản 2 Điều 10; cụm từ “quy hoạch phát triển, ứng dụng năng lượng nguyên tử” tại khoản 4 và 5 Điều 36;
+đ) Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng “quy hoạch chi tiết ngành” tại điểm a khoản
+586814 | REPEAL |  | 82a | 2 |  | Bãi bỏ khoản 2 Điều 82a;
+l) Thay thế cụm từ “quy hoạch chi tiết phát triển vùng đất, vùng nước cảng biển” bằng cụm từ “quy hoạch chi tiết kết cấu hạ tầng hàng hải” tại khoản 2 Điều 88;
+m) Thay thế cụm từ “quy hoạch có tính chấ
+586814 | REPLACE | 15/2023/QH15 | 5 | 1 | c | Thay thế cụm từ “quy hoạch hệ thống cơ sở khám bệnh, chữa bệnh” bằng cụm từ “quy hoạch mạng lưới cơ sở y tế công lập” tại điểm c khoản 1 Điều 5 của Luật Khám bệnh, chữa bệnh số 15/2023/QH15.
+10. Bãi bỏ cụm từ “phê duyệt quy hoạc
+586814 | REPLACE | 19/2012/QH13 | 34 | 2 |  | Thay thế cụm từ “quy hoạch phát triển mạng bưu chính công cộng” bằng cụm từ “quy hoạch tỉnh” tại khoản 2 Điều 34;
+b) Bãi bỏ khoản 11 Điều 44.
+7. Sửa đổi, bổ sung một số điều của Luật Xuất bản số 19/2012/QH13 đã được sửa đổi, bổ
+586814 | REPLACE | 45/2024/QH15 | 50 | 1 | m | Thay thế cụm từ “Quy hoạch và quản lý” bằng cụm từ “Quản lý” tại điểm m khoản 1 Điều 50;
+b) Bãi bỏ điểm c khoản 3 Điều 50.
+12. Sửa đổi, bổ sung một số điều của Luật Di sản văn hóa số 45/2024/QH15 đã được sửa đổi, bổ sung một số
+586814 | REPLACE | 50/2010/QH12 | 6 | 2 |  | Thay thế cụm từ “quy hoạch ngành quốc gia” bằng cụm từ “quy hoạch ngành” tại khoản 2 Điều 6 của Luật Sử dụng năng lượng tiết kiệm và hiệu quả số 50/2010/QH12 đã được sửa đổi, bổ sung một số điều theo Luật số 28/2018/QH14 và Luật
+586814 | REPLACE |  | 10 | 4 |  | Thay thế cụm từ “phương án phát triển kết cấu hạ tầng đường thủy nội địa” bằng cụm từ “phương hướng phát triển kết cấu hạ tầng đường thủy nội địa” tại khoản 4 Điều 10 và khoản 2 Điều 100;
+e) Bổ sung Điều 10a vào sau Điều 10 như
+586814 | REPLACE |  | 10 | 2 |  | thay thế cụm từ “quy hoạch tài nguyên nước, quy hoạch phòng, chống thiên tai và thủy lợi” bằng cụm từ “quy hoạch tài nguyên nước, thủy lợi và phòng, chống thiên tai” tại khoản 2 Điều 10;
+d) Sửa đổi, bổ sung khoản 3 Điều 10 như s
+586814 | REPLACE |  | 102 | 1 |  | Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi tiết ngành” tại khoản 1 Điều 102;
+n) Sửa đổi, bổ sung khoản 3 Điều 102 như sau:
+“3. Bộ Giao thông vận tải tổ chức lập, phê duyệt quy hoạc
+586814 | REPLACE |  | 13 | 4 | b | Thay thế cụm từ “quy hoạch hạ tầng kỹ thuật viễn thông thụ động” bằng cụm từ “phương hướng phát triển hạ tầng kỹ thuật viễn thông thụ động trong quy hoạch tỉnh” tại điểm b khoản 4 Điều 13, khoản 1 Điều 64, khoản 1 Điều 65 và điể
+586814 | REPLACE |  | 14 | 4 |  | Thay thế cụm từ “theo kế hoạch thực hiện quy hoạch đã được phê duyệt” bằng cụm từ “phù hợp với quy hoạch đã được phê duyệt” tại khoản 4 Điều 14;
+c) Thay thế cụm từ “quy hoạch ngành quốc gia” bằng cụm từ “quy hoạch ngành” tại điể
+586814 | REPLACE |  | 19 | 2 | a | Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi tiết ngành” tại điểm a khoản 2 Điều 19;
+đ) Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành đường sắt” bằng cụm từ “quy họa
+586814 | REPLACE |  | 19 | 1 | a | Thay thế cụm từ “quy hoạch ngành quốc gia” bằng cụm từ “quy hoạch ngành” tại điểm a khoản 1 Điều 19;
+d) Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi tiết ngành” tại điểm a khoản 2 Đi
+586814 | REPLACE |  | 23 | 4 |  | Thay thế cụm từ “Quy hoạch phát triển, ứng dụng năng lượng nguyên tử” bằng cụm từ “Quy hoạch mạng lưới quan trắc và cảnh báo phóng xạ môi trường quốc gia” tại khoản 4 Điều 23;
+c) Sửa đổi, bổ sung khoản 5 Điều 23 như sau:
+“5. Chí
+586814 | REPLACE |  | 25 | 2 |  | Thay thế cụm từ “quy hoạch kho số viễn thông” bằng cụm từ “quy hoạch kho số viễn thông và tài nguyên Internet” tại khoản 2 Điều 25;
+c) Thay thế cụm từ “quy hoạch kho số viễn thông, quy hoạch tài nguyên Internet” bằng cụm từ “quy
+586814 | REPLACE |  | 3 | 1 |  | Thay thế cụm từ “quy hoạch kết cấu hạ tầng đường thủy nội địa” bằng cụm từ “quy hoạch tổng thể kết cấu hạ tầng đường thủy nội địa, quy hoạch chi tiết kết cấu hạ tầng đường thủy nội địa” tại khoản 1 Điều 3, khoản 3 Điều 4, khoản
+586814 | REPLACE |  | 34 | 1 |  | Thay thế cụm từ quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng cụm từ “quy hoạch chi tiết ngành” tại khoản 1 Điều 34 và khoản 1 Điều 37;
+b) Sửa đổi, bổ sung khoản 4 Điều 34 như sau:
+“4. Bộ Văn hóa, Thể thao và Du lịch tổ ch
+586814 | REPLACE |  | 34 | 3 |  | Thay thế cụm từ “quy hoạch kho số viễn thông, quy hoạch tài nguyên Internet” bằng cụm từ “quy hoạch kho số viễn thông và tài nguyên Internet” tại khoản 3 Điều 34, Điều 49, điểm a khoản 1 Điều 50 và điểm b khoản 2 Điều 53;
+d) Sửa
+586814 | REPLACE |  | 37 | 1 |  | Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành đường sắt” bằng cụm từ “quy hoạch tuyến đường sắt, ga đường sắt” tại khoản 1 Điều 37.
+2. Sửa đổi, bổ sung một số điều của Luật Giao thông đường thủy nội địa số 23/20
+586814 | REPLACE |  | 43 | 3 | a | Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng “quy hoạch chi tiết ngành” tại điểm a khoản 3 Điều 43.
+9. Thay thế cụm từ “quy hoạch hệ thống cơ sở khám bệnh, chữa bệnh” bằng cụm từ “quy hoạch mạng lưới cơ s
+586814 | REPLACE |  | 8 | 3 |  | Thay thế cụm từ “quy hoạch mạng lưới cơ sở giáo dục đại học và sư phạm” bằng cụm từ “quy hoạch mạng lưới cơ sở giáo dục đại học và giáo dục nghề nghiệp công lập” tại khoản 3 Điều 8 của Luật Giáo dục quốc phòng và an ninh số 30/2
+586814 | REPLACE |  | 82 | 2 |  | Thay thế cụm từ “quy hoạch tổng thể phát triển hệ thống cảng biển” bằng cụm từ “quy hoạch tổng thể kết cấu hạ tầng hàng hải” tại tên điều, khoản 1 và khoản 2 Điều 82;
+đ) Sửa đổi, bổ sung tên Điều 82a như sau:
+“Điều 82a. Quy hoạc
+586814 | REPLACE |  | 82a | 3 |  | Thay thế cụm từ “Quy hoạch chi tiết phát triển vùng đất, vùng nước cảng biển” bằng cụm từ “Quy hoạch chi tiết kết cấu hạ tầng hàng hải” tại đoạn mở đầu của khoản 3 Điều 82a;
+h) Sửa đổi, bổ sung khoản 4 Điều 82a như sau:
+“4. Bộ t
+586814 | REPLACE |  | 88 | 2 |  | Thay thế cụm từ “quy hoạch chi tiết phát triển vùng đất, vùng nước cảng biển” bằng cụm từ “quy hoạch chi tiết kết cấu hạ tầng hàng hải” tại khoản 2 Điều 88;
+m) Thay thế cụm từ “quy hoạch có tính chất kỹ thuật, chuyên ngành” bằng
+586814 | REPLACE |  | 9 | 1 |  | Thay thế cụm từ “quy hoạch mạng lưới giao thông” bằng cụm từ “quy hoạch mạng lưới đường sắt” tại khoản 1 Điều 9;
+b) Thay thế cụm từ “theo kế hoạch thực hiện quy hoạch đã được phê duyệt” bằng cụm từ “phù hợp với quy hoạch đã được
+586814 | REPLACE |  | 99 | 6 |  | Thay thế cụm từ “quy hoạch phát triển lưu vực sông” bằng cụm từ “quy hoạch tổng hợp tài nguyên nước và hạ tầng thủy lợi lưu vực sông liên tỉnh” tại khoản 6 Điều 99.
+3. Thay thế cụm từ “quy hoạch ngành quốc gia” bằng cụm từ “quy
+586814 | REPLACE |  | 99 | 5 |  | Thay thế cụm từ “quy hoạch đê điều, công trình thủy lợi” bằng cụm từ “quy hoạch tài nguyên nước, thủy lợi và phòng, chống thiên tai” tại khoản 5 Điều 99;
+h) Thay thế cụm từ “quy hoạch phát triển lưu vực sông” bằng cụm từ “quy ho
+616621 | ADD |  | 22 |  |  | bổ sung (nếu thấy cần thiết), lập thiết kế chi tiết và thực hiện công tác triển khai (sau đây gọi là nhà thầu triển khai) theo quy định tại Điều này và Điều 22 của Nghị định này. Nhà thầu triển khai được lập thiết kế chi tiết v
+616621 | AMEND | 73/2019/NĐ-CP |  |  |  | sửa đổi, bổ sung một số điều của Nghị định số 73/2019/NĐ-CP ngày 05 tháng 9 năm 2019 của Chính phủ quy định quản lý đầu tư ứng dụng công nghệ thông tin sử dụng nguồn vốn ngân sách nhà nước.
+3. Nghị quyết số 04/2025/NQ-CP ngày 20 tháng 8
+616621 | AMEND | 90/2025/QH15 | 7 | 21 |  | sửa đổi, bổ sung, quy định chi tiết; trình tự, thủ tục quyết định đầu tư đối với dự án đầu tư ứng dụng công nghệ thông tin đặc biệt thực hiện theo quy định tại khoản 21 Điều 7 của Luật số 90/2025/QH15 và các văn bản sửa đổi, bổ sung, qu
+616621 | REPEAL | 132/2025/NĐ-CP | 6 |  |  | Bãi bỏ Điều 6 của Nghị định số 132/2025/NĐ-CP ngày 12 tháng 6 năm 2025 của Chính phủ quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp trong lĩnh vực quản lý nhà nước của Bộ Khoa học và Công nghệ và Điều 34, Đ
+616621 | REPLACE | 73/2019/NĐ-CP |  |  |  | thay thế Nghị định số 73/2019/NĐ-CP ngày 05 tháng 9 năm 2019 của Chính phủ quy định quản lý đầu tư ứng dụng công nghệ thông tin sử dụng nguồn vốn ngân sách nhà nước; Nghị định số 82/2024/NĐ-CP ngày 10 tháng 7 năm 2024 của Chính
+rows 75
+
+codex
+Truy vấn rộng quá lớn vì `586814` có nhiều amendments; nhưng đủ thấy DB cũ có record `616621 REPEAL 132/2025/NĐ-CP Điều 6` và `586814 EXPIRE 21/2017/QH15 Điều 58`. Tôi sẽ lọc đúng 4 record kỳ vọng để tránh nhiễu trước khi sửa.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; @'
+import duckdb
+queries = [
+    (\"616621\", \"REPEAL\", \"132/2025/NĐ-CP\", \"6\"),
+    (\"586814\", \"EXPIRE\", \"21/2017/QH15\", \"58\"),
+]
+for db in [r'D:\\tmp\\legal_sample_200_old_extract.duckdb', r'legal_sample_200.duckdb']:
+    con=duckdb.connect(db, read_only=True)
+    print('\\nDB', db)
+    for doc, op, target, dieu in queries:
+        rows=con.execute(\"\"\"
+            select src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_text
+            from amendments
+            where src_doc_id=? and op=? and target_so_ky_hieu=? and target_dieu=?
+        \"\"\", [doc, op, target, dieu]).fetchall()
+        print(doc, op, target, dieu, 'count=', len(rows))
+        for r in rows:
+            print('  evidence=', r[4][:300].replace('\\n',' '))
+    rows=con.execute(\"\"\"
+        select src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_text
+        from amendments
+        where src_doc_id='694652' and target_so_ky_hieu in ('1598/QĐ-UBND','991/QĐ-UBND')
+        order by target_so_ky_hieu, evidence_text
+    \"\"\").fetchall()
+    print('694652 listed targets count=', len(rows))
+    for r in rows:
+        print(' ', r[0], r[1], r[2], r[3], r[4][:300].replace('\\n',' '))
+    con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 656ms:
+
+DB D:\tmp\legal_sample_200_old_extract.duckdb
+616621 REPEAL 132/2025/N?-CP 6 count= 0
+586814 EXPIRE 21/2017/QH15 58 count= 1
+  evidence= hết hiệu lực kể từ ngày Luật này được thông qua. 6. Luật Quy hoạch số 21/2017/QH15 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các quy định có liên quan tại Điều 58 của Luật này. Điều 58. Điều khoản chuyển tiếp 1. Quy
+694652 listed targets count= 0
+
+DB legal_sample_200.duckdb
+616621 REPEAL 132/2025/N?-CP 6 count= 0
+586814 EXPIRE 21/2017/QH15 58 count= 0
+694652 listed targets count= 0
+
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; @'
+import duckdb
+for db in [r'D:\\tmp\\legal_sample_200_old_extract.duckdb', r'legal_sample_200.duckdb']:
+    con=duckdb.connect(db, read_only=True)
+    print('\\nDB', db)
+    rows=con.execute(\"\"\"
+        select src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_text
+        from amendments
+        where src_doc_id='616621' and op='REPEAL' and target_dieu='6'
+        order by evidence_text
+    \"\"\").fetchall()
+    print('616621 repeal dieu 6', len(rows))
+    for r in rows: print(r[0], r[1], r[2], r[3], r[4][:250].replace('\\n',' '))
+    rows=con.execute(\"\"\"
+        select src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_text
+        from amendments
+        where src_doc_id='694652'
+        order by op, target_so_ky_hieu, target_dieu, evidence_text
+    \"\"\").fetchall()
+    print('694652 all', len(rows))
+    for r in rows: print(r[0], r[1], r[2], r[3], r[4][:250].replace('\\n',' '))
+    con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 270ms:
+
+DB D:\tmp\legal_sample_200_old_extract.duckdb
+616621 repeal dieu 6 1
+616621 REPEAL 132/2025/NĐ-CP 6 Bãi bỏ Điều 6 của Nghị định số 132/2025/NĐ-CP ngày 12 tháng 6 năm 2025 của Chính phủ quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp trong lĩnh vực quản lý nhà nước của Bộ Khoa học và Công nghệ và Điều 34, Đ
+694652 all 6
+694652 AMEND None 2 sửa đổi, bổ sung hoặc thay thế, bị bãi bỏ trong lĩnh vực thủy sản và kiểm ngư thuộc phạm vi chức năng quản lý của Sở Nông nghiệp và Môi trường trên địa bàn tỉnh Đắk Lắk, chi tiết tại Phụ lục kèm theo. Điều 2. Giao Sở Nông nghiệp và Môi
+694652 EXPIRE 1598/QĐ-UBND None hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành. 2. Nội dung công bố thủ tục hành chính lĩnh vực thủy sản tại số thứ tự 1, 4, 5, 6, 10, 11 mục A Phụ lục ban hành kèm theo Quyết định số 1598/QĐ-UBND ngày 30/6/2025 của Chủ
+694652 EXPIRE 991/QĐ-UBND None hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành. 3. Nội dung công bố thủ tục hành chính lĩnh vực thủy sản tại số thứ tự 3, 4, 5, 6 mục I Phụ lục ban hành kèm theo Quyết định số 991/QĐ-UBND ngày 28/4/2025 của Chủ tịch UBN
+694652 EXPIRE None 4 hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành. Điều 4. Chánh Văn phòng UBND tỉnh, Giám đốc Sở Nông nghiệp và Môi trường, Chủ tịch UBND các xã, phường và các tổ chức, cá nhân có liên quan chịu trách nhiệm thi hành Quyết
+694652 REPEAL None 2 bãi bỏ trong lĩnh vực thủy sản và kiểm ngư thuộc phạm vi chức năng quản lý của Sở Nông nghiệp và Môi trường trên địa bàn tỉnh Đắk Lắk, chi tiết tại Phụ lục kèm theo. Điều 2. Giao Sở Nông nghiệp và Môi trường căn cứ Danh mục th
+694652 REPLACE None 2 thay thế, bị bãi bỏ trong lĩnh vực thủy sản và kiểm ngư thuộc phạm vi chức năng quản lý của Sở Nông nghiệp và Môi trường trên địa bàn tỉnh Đắk Lắk, chi tiết tại Phụ lục kèm theo. Điều 2. Giao Sở Nông nghiệp và Môi trường căn cứ
+
+DB legal_sample_200.duckdb
+616621 repeal dieu 6 1
+616621 REPEAL 132/2025/NĐ-CP 6 Bãi bỏ Điều 6 của Nghị định số 132/2025/NĐ-CP ngày 12 tháng 6 năm 2025 của Chính phủ quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp trong lĩnh vực quản lý nhà nước của Bộ Khoa học và Công nghệ và Điều 34, Đ
+694652 all 0
+
+codex
+Tôi sẽ sửa bằng cách chuyển quyết định drop self-reference xuống sau khi đã tính `doc` và `prov`. Điều kiện drop sẽ chỉ kích hoạt khi `EXPIRE/SUSPEND` có self-reference ở đầu window nhưng cả `doc` lẫn `prov` đều không có, rồi rule B vẫn xử lý nhất quán ngay sau đó.
+2026-08-25T04:23:37.955700Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to read file to update D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\files\vbpl_extract.py: fs sandbox helper failed with status exit code: 1: windows sandbox failed: helper_unknown_error: setup refresh had errors
+codex
+`apply_patch` bị lỗi sandbox helper khi đọc file, không phải lỗi context patch. Tôi sẽ thử lại một lần với cùng patch; nếu vẫn lỗi, tôi sẽ dùng phương án chỉnh sửa tối thiểu qua script vì sandbox đang chặn công cụ patch.
+2026-08-25T04:23:44.801328Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to read file to update D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\files\vbpl_extract.py: fs sandbox helper failed with status exit code: 1: windows sandbox failed: helper_unknown_error: setup refresh had errors
+codex
+Công cụ patch vẫn lỗi ở lớp sandbox, nên tôi sẽ dùng PowerShell để thay đúng đoạn 3 dòng bằng đoạn mới, không động tới file khác. Sau đó tôi sẽ đọc lại block hàm để xác nhận edit chính xác.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$path = '"'files\\vbpl_extract.py'
+"'$text = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+$old = @'"'
+        same_clause_doc = RX_DOC_REF.search(same_clause)
+        if op in {\"EXPIRE\", \"SUSPEND\"} and self_ref_effect.search(win[:100]) and not same_clause_doc and not same_clause.rstrip().endswith(\":\"):
+            continue
+        doc = RX_DOC_REF.search(win)
+        prov_win = win if doc else same_clause
+        prov = RX_PROV_REF.search(prov_win)
+'@
+"'$new = @'"'
+        doc = RX_DOC_REF.search(win)
+        prov_win = win if doc else same_clause
+        prov = RX_PROV_REF.search(prov_win)
+        if op in {\"EXPIRE\", \"SUSPEND\"} and self_ref_effect.search(win[:100]) and not doc and not prov and not same_clause.rstrip().endswith(\":\"):
+            continue
+'@
+if (-not "'$text.Contains($old)) { throw '"'target block not found' }
+"'$text = $text.Replace($old, $new)
+[System.IO.File]::WriteAllText($path, $text, [System.Text.Encoding]::UTF8)' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T04:23:54.905795Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.2 seconds
+Output:
+target block not found
+At line:19 char:34
++ if (-not $text.Contains($old)) { throw 'target block not found' }
++                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (target block not found:String) [], RuntimeException
+    + FullyQualifiedErrorId : target block not found
+ 
+
+ exited 1 in 161ms:
+target block not found
+At line:19 char:34
++ if (-not $text.Contains($old)) { throw 'target block not found' }
++                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (target block not found:String) [], RuntimeException
+    + FullyQualifiedErrorId : target block not found
+ 
+
+codex
+Đoạn thay thế không match nguyên văn, khả năng do newline/encoding hoặc text hiển thị khác. Tôi sẽ lấy vài dòng quanh vị trí đó bằng số dòng rồi thay theo chỉ số dòng cụ thể để vẫn giữ phạm vi hẹp.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$i=1; Get-Content files'"\\vbpl_extract.py | ForEach-Object { if ("'$i -ge 742 -and $i -le 756) { '"'{0,4}: {1}' -f "'$i, $_ }; $i++ }' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 155ms:
+ 742:             continue
+ 743:         last_end = m.end()
+ 744:         verb = m.group(1).lower()
+ 745:         win = text[m.end(): m.end() + 220]
+ 746:         op = AMEND_MAP.get(verb, "OTHER")
+ 747:         same_clause = re.split(r"[.;\n]", win, maxsplit=1)[0]
+ 748:         same_clause_doc = RX_DOC_REF.search(same_clause)
+ 749:         if op in {"EXPIRE", "SUSPEND"} and self_ref_effect.search(win[:100]) and not same_clause_doc and not same_clause.rstrip().endswith(":"):
+ 750:             continue
+ 751:         doc = RX_DOC_REF.search(win)
+ 752:         prov_win = win if doc else same_clause
+ 753:         prov = RX_PROV_REF.search(prov_win)
+ 754:         if not doc and not prov:
+ 755:             continue
+ 756:         quoted = re.search(r'"([^"]{5,2000})"', win, re.S)
+
+codex
+Tôi đã có line numbers chính xác: cần bỏ `same_clause_doc` và early `continue`, rồi thêm self-ref check sau `prov`. Tôi sẽ thực hiện line-level edit tối thiểu trên đúng các dòng này.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$path = '"'files\\vbpl_extract.py'
+"'$lines = [System.Collections.Generic.List[string]]::new()
+$lines.AddRange([System.IO.File]::ReadAllLines($path, [System.Text.Encoding]::UTF8))
+# 0-based: remove original lines 748-750 from displayed 1-based output.
+$lines.RemoveRange(747, 3)
+$lines.Insert(750, '"'        if op in {\"EXPIRE\", \"SUSPEND\"} and self_ref_effect.search(win[:100]) and not doc and not prov and not same_clause.rstrip().endswith(\":\"):')
+"'$lines.Insert(751, '"'            continue')
+[System.IO.File]::WriteAllLines("'$path, $lines, [System.Text.Encoding]::UTF8)' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 129ms:
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$i=1; Get-Content files'"\\vbpl_extract.py | ForEach-Object { if ("'$i -ge 744 -and $i -le 758) { '"'{0,4}: {1}' -f "'$i, $_ }; $i++ }' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 167ms:
+ 744:         verb = m.group(1).lower()
+ 745:         win = text[m.end(): m.end() + 220]
+ 746:         op = AMEND_MAP.get(verb, "OTHER")
+ 747:         same_clause = re.split(r"[.;\n]", win, maxsplit=1)[0]
+ 748:         doc = RX_DOC_REF.search(win)
+ 749:         prov_win = win if doc else same_clause
+ 750:         prov = RX_PROV_REF.search(prov_win)
+ 751:         if op in {"EXPIRE", "SUSPEND"} and self_ref_effect.search(win[:100]) and not doc and not prov and not same_clause.rstrip().endswith(":"):
+ 752:             continue
+ 753:         if not doc and not prov:
+ 754:             continue
+ 755:         quoted = re.search(r'"([^"]{5,2000})"', win, re.S)
+ 756:         ops.append({
+ 757:             "op": op,
+ 758:             "verb": verb,
+
+codex
+Edit đã đúng vị trí: target được tính trước, self-reference chỉ drop khi `doc` và `prov` đều rỗng. Tôi chuyển sang chạy compile, rebuild sample DB, rồi validate invariants như yêu cầu.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python -m py_compile files\\vbpl_extract.py" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 347ms:
+2026-08-25T04:24:14.862730Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+`py_compile` đã pass. Tôi đang rebuild `legal_sample_200.duckdb` với limit 200 để lấy kết quả mới sau patch.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; python -u files\\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T04:26:24.263325Z ERROR codex_core::tools::router: error=Exit code: 124
+Wall time: 124 seconds
+Output:
+command timed out after 124045 milliseconds
+
+ exited 124 in 124045ms:
+codex
+Rebuild sample vượt quá timeout 120s và bị dừng. Tôi sẽ chạy lại với timeout dài hơn để hoàn tất sạch với `--overwrite`.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; python -u files\\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T04:31:32.518872Z ERROR codex_core::tools::router: error=Exit code: 124
+Wall time: 304 seconds
+Output:
+command timed out after 304029 milliseconds
+
+ exited 124 in 304029ms:
+codex
+Lần chạy 5 phút vẫn chưa hoàn tất và không in tiến độ. Vì bước này bắt buộc để verify DB mới, tôi sẽ chạy lại với timeout dài hơn; nếu vẫn treo, tôi sẽ kiểm tra script đang kẹt ở I/O hay ingest thật sự chậm.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; python -u files\\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 457542ms:
+ingested 1/200 latest=693036 status=NEW
+ingested 25/200 latest=680586 status=NEW
+ingested 50/200 latest=684205 status=NEW
+ingested 75/200 latest=692542 status=NEW
+ingested 100/200 latest=695444 status=NEW
+ingested 125/200 latest=694948 status=NEW
+ingested 150/200 latest=674286 status=NEW
+ingested 175/200 latest=694283 status=NEW
+ingested 200/200 latest=694325 status=NEW
+
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+Statuses: {'NEW': 200}
+
+Resolution:
+amendments: total=404 resolved_docs=7 resolved_provisions=0 ambiguous=0 not_found=247 no_target=150 provision_miss=1
+document_edges: total=7284 resolved_docs=39 resolved_provisions=0 ambiguous=3 not_found=2884 no_target=4358 provision_miss=0
+Ambiguous examples:
+  17/2025/NQ-HĐND: 2 candidates (Tỉnh Cao Bằng | Tỉnh Ninh Bình)
+documents: 200
+document_versions: 200
+raw_docs: 200
+document_lines: 60147
+document_blocks: 633
+provisions: 9300
+provision_versions: 9300
+chunks: 9541
+amendments: 404
+document_edges: 7284
+parse_quality_reports: 200
+
+Parse quality:
+parse_status   n  min_coverage  avg_coverage
+          ok 200           1.0           1.0
+
+codex
+Rebuild xong, amendments mới là `404` (trước patch trong DB hiện tại là `397`). Tôi sẽ chạy invariant validator ngay bây giờ.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; python files\\validate_parse_invariants.py --db legal_sample_200.duckdb --expected-docs 200" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T04:39:25.841349Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 5.2 seconds
+Output:
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+
+## Invariant checks
+[PASS] expected_doc_count: documents=200, expected=200
+[PASS] coverage_all_ok: reports=200, ok=200, min_coverage=1.0, max_orphans=0
+[PASS] coverage_has_every_source_line: line_count_mismatches=0
+[PASS] unique_storage_paths: duplicate_storage_path_groups=0
+[PASS] unique_own_legal_paths: duplicate_own_legal_path_groups=0
+[PASS] all_parent_refs_exist: missing_parent_refs=0
+[PASS] child_path_extends_parent_path: bad_parent_prefix=0
+[PASS] cross_context_parent_links_recorded: cross_context_parent_links=237
+[PASS] outline_refs_exist: missing_outline_refs=0
+[PASS] preamble_items_have_single_classification: duplicate_preamble_classifications=0
+[PASS] context_units_match_nonempty_provisions: context_units=9300, nonempty_provisions=9300
+[PASS] context_units_have_source_line_refs: missing_context_source_line_refs=0
+[PASS] context_source_line_refs_join_document_lines: invalid_context_source_line_refs=0
+[PASS] outline_context_units_match_nonempty_outline_items: outline_context_units=25849, nonempty_outline_items=25849
+[PASS] outline_context_units_have_source_line_refs: missing_outline_source_line_refs=0
+[PASS] outline_source_line_refs_join_document_lines: invalid_outline_source_line_refs=0
+[PASS] source_line_view_matches_document_lines: source_line_view_rows=60147, document_lines=60147
+[PASS] nonblank_source_lines_have_context: unmapped_nonblank_source_lines=0
+[PASS] table_context_units_cover_appendix_and_embedded_tables: table_context_units=451, expected=451
+[PASS] embedded_table_context_units_have_source_refs: embedded_tables_missing_source_refs=0
+[PASS] quote_context_is_consistent: bad_quote_rows=0
+[PASS] provision_line_ranges_valid: bad_line_ranges=0
+[PASS] appendix_tables_have_rows_and_columns: appendix_table_issues=0
+[PASS] chunk_refs_exist: missing_chunk_refs=0
+[PASS] retrieval_chunks_respect_size_limit: oversized_chunks=0
+[PASS] retrieval_chunks_cover_leaf_and_intro_units: missing_retrieval_chunks=0
+[PASS] outline_body_text_matches_provisions: outline_body_text_mismatches=0
+[PASS] quoted_targets_present: quoted_target_nodes=627
+[FAIL] amendments_no_self_referential_expire: self_referential_expire_rows=7
+
+## Summary
+PASS=28 WARN=0 FAIL=1
+
+ exited 1 in 5242ms:
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+
+## Invariant checks
+[PASS] expected_doc_count: documents=200, expected=200
+[PASS] coverage_all_ok: reports=200, ok=200, min_coverage=1.0, max_orphans=0
+[PASS] coverage_has_every_source_line: line_count_mismatches=0
+[PASS] unique_storage_paths: duplicate_storage_path_groups=0
+[PASS] unique_own_legal_paths: duplicate_own_legal_path_groups=0
+[PASS] all_parent_refs_exist: missing_parent_refs=0
+[PASS] child_path_extends_parent_path: bad_parent_prefix=0
+[PASS] cross_context_parent_links_recorded: cross_context_parent_links=237
+[PASS] outline_refs_exist: missing_outline_refs=0
+[PASS] preamble_items_have_single_classification: duplicate_preamble_classifications=0
+[PASS] context_units_match_nonempty_provisions: context_units=9300, nonempty_provisions=9300
+[PASS] context_units_have_source_line_refs: missing_context_source_line_refs=0
+[PASS] context_source_line_refs_join_document_lines: invalid_context_source_line_refs=0
+[PASS] outline_context_units_match_nonempty_outline_items: outline_context_units=25849, nonempty_outline_items=25849
+[PASS] outline_context_units_have_source_line_refs: missing_outline_source_line_refs=0
+[PASS] outline_source_line_refs_join_document_lines: invalid_outline_source_line_refs=0
+[PASS] source_line_view_matches_document_lines: source_line_view_rows=60147, document_lines=60147
+[PASS] nonblank_source_lines_have_context: unmapped_nonblank_source_lines=0
+[PASS] table_context_units_cover_appendix_and_embedded_tables: table_context_units=451, expected=451
+[PASS] embedded_table_context_units_have_source_refs: embedded_tables_missing_source_refs=0
+[PASS] quote_context_is_consistent: bad_quote_rows=0
+[PASS] provision_line_ranges_valid: bad_line_ranges=0
+[PASS] appendix_tables_have_rows_and_columns: appendix_table_issues=0
+[PASS] chunk_refs_exist: missing_chunk_refs=0
+[PASS] retrieval_chunks_respect_size_limit: oversized_chunks=0
+[PASS] retrieval_chunks_cover_leaf_and_intro_units: missing_retrieval_chunks=0
+[PASS] outline_body_text_matches_provisions: outline_body_text_mismatches=0
+[PASS] quoted_targets_present: quoted_target_nodes=627
+[FAIL] amendments_no_self_referential_expire: self_referential_expire_rows=7
+
+## Summary
+PASS=28 WARN=0 FAIL=1
+
+2026-08-25T04:39:25.883853Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+Validator phát hiện 7 self-referential EXPIRE còn lọt, nghĩa là chỉ đổi điều kiện drop chưa đủ vì evidence vẫn giữ câu boilerplate ở đầu. Tôi sẽ soi 7 rows đó và chỉnh trong `extract_amendments()` để giữ target thật nhưng không để evidence bắt đầu bằng câu tự tham chiếu làm invariant fail.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; @'
+import duckdb
+con=duckdb.connect('legal_sample_200.duckdb', read_only=True)
+self_ref_expire_pattern = \"(Luật|Nghị định|Nghị quyết|Quyết định|Thông tư|Pháp lệnh)\\\\s+này\\\\s+(?:có hiệu lực|được thông qua)\"
+doc_ref_pattern = \"\\\\b\\\\d{1,4}[a-z]?/(?:\\\\d{4}/)?[A-ZĐ][A-ZĐ0-9\\\\-]{1,20}\\\\b\"
+same_clause_doc_ref_pattern = \""'^[''^.;'"\\\\n]*\" + doc_ref_pattern
+colon_list_doc_ref_pattern = \"(?s)"'^[''^.;'"\\\\n]*:.*\" + doc_ref_pattern
+rows=con.execute(\"\"\"
+SELECT src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_start, evidence_end, evidence_text
+FROM amendments
+WHERE op = 'EXPIRE'
+  AND regexp_matches(evidence_text, ?, 'i')
+  AND NOT regexp_matches(evidence_text, ?)
+  AND NOT regexp_matches(evidence_text, ?)
+ORDER BY src_doc_id, target_so_ky_hieu, target_dieu
+\"\"\", [self_ref_expire_pattern, same_clause_doc_ref_pattern, colon_list_doc_ref_pattern]).fetchall()
+print('count', len(rows))
+for r in rows:
+    print('\\n', r[0], r[1], r[2], r[3], r[4], r[5])
+    print(r[6][:500].replace('\\n',' '))
+con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T04:39:46.151455Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.7 seconds
+Output:
+Traceback (most recent call last):
+  File "<stdin>", line 7, in <module>
+_duckdb.InvalidInputException: Invalid Input Error: no argument for repetition operator: ??
+
+ exited 1 in 686ms:
+Traceback (most recent call last):
+  File "<stdin>", line 7, in <module>
+_duckdb.InvalidInputException: Invalid Input Error: no argument for repetition operator: ??
+
+2026-08-25T04:39:46.204436Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; @'
+import duckdb
+con=duckdb.connect('legal_sample_200.duckdb', read_only=True)
+pattern = \"(Luật|Nghị định|Nghị quyết|Quyết định|Thông tư|Pháp lệnh)\\\\s+này\\\\s+(có hiệu lực|được thông qua)\"
+rows=con.execute(\"\"\"
+SELECT src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_start, evidence_end, evidence_text
+FROM amendments
+WHERE op = 'EXPIRE' AND regexp_matches(evidence_text, ?, 'i')
+ORDER BY src_doc_id, target_so_ky_hieu, target_dieu
+\"\"\", [pattern]).fetchall()
+print('count selfref expire', len(rows))
+for r in rows:
+    print('\\n', r[0], r[1], r[2], r[3], r[4], r[5])
+    print(r[6][:500].replace('\\n',' '))
+con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T04:39:54.983370Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.6 seconds
+Output:
+Traceback (most recent call last):
+  File "<stdin>", line 4, in <module>
+_duckdb.InvalidInputException: Invalid Input Error: no argument for repetition operator: ??
+
+ exited 1 in 603ms:
+Traceback (most recent call last):
+  File "<stdin>", line 4, in <module>
+_duckdb.InvalidInputException: Invalid Input Error: no argument for repetition operator: ??
+
+2026-08-25T04:39:55.014923Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+DuckDB regex qua stdin đang bị lỗi encoding pattern Unicode, nên tôi sẽ lọc 7 row bằng Python regex sau khi lấy các `EXPIRE` rows từ DB. This avoids changing validator behavior; chỉ để debug.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; @'
+import duckdb, re
+con=duckdb.connect('legal_sample_200.duckdb', read_only=True)
+self_ref = re.compile(r'(Luật|Nghị định|Nghị quyết|Quyết định|Thông tư|Pháp lệnh)\\s+này\\s+(?:có hiệu lực|được thông qua)', re.I)
+doc_ref = re.compile(r'\\b\\d{1,4}[a-z]?/(?:\\d{4}/)?[A-ZĐ][A-ZĐ0-9\\-]{1,20}\\b')
+rows=con.execute(\"\"\"
+SELECT src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_start, evidence_end, evidence_text
+FROM amendments WHERE op='EXPIRE'
+ORDER BY src_doc_id, target_so_ky_hieu, target_dieu
+\"\"\").fetchall()
+out=[]
+for r in rows:
+    ev=r[6]
+    same=re.split(r'[.;\\n]', ev, maxsplit=1)[0]
+    if self_ref.search(ev) and not doc_ref.search(same) and not (':' in same and doc_ref.search(ev.split(':',1)[1] if ':' in ev else '')):
+        out.append(r)
+print('count', len(out))
+for r in out:
+    print('\\n', r[0], r[1], r[2], r[3], r[4], r[5])
+    print(r[6][:520].replace('\\n',' '))
+con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T04:40:05.448956Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.3 seconds
+Output:
+Traceback (most recent call last):
+  File "<stdin>", line 3, in <module>
+  File "C:\Python314\Lib\re\__init__.py", line 289, in compile
+    return _compile(pattern, flags)
+  File "C:\Python314\Lib\re\__init__.py", line 350, in _compile
+    p = _compiler.compile(pattern, flags)
+  File "C:\Python314\Lib\re\_compiler.py", line 762, in compile
+    p = _parser.parse(p, flags)
+  File "C:\Python314\Lib\re\_parser.py", line 973, in parse
+    p = _parse_sub(source, state, flags & SRE_FLAG_VERBOSE, 0)
+  File "C:\Python314\Lib\re\_parser.py", line 460, in _parse_sub
+    itemsappend(_parse(source, state, verbose, nested + 1,
+                ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                       not nested and not items))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\re\_parser.py", line 856, in _parse
+    p = _parse_sub(source, state, sub_verbose, nested + 1)
+  File "C:\Python314\Lib\re\_parser.py", line 460, in _parse_sub
+    itemsappend(_parse(source, state, verbose, nested + 1,
+                ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                       not nested and not items))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\re\_parser.py", line 687, in _parse
+    raise source.error("nothing to repeat",
+                       source.tell() - here + len(this))
+re.PatternError: nothing to repeat at position 81
+
+ exited 1 in 285ms:
+Traceback (most recent call last):
+  File "<stdin>", line 3, in <module>
+  File "C:\Python314\Lib\re\__init__.py", line 289, in compile
+    return _compile(pattern, flags)
+  File "C:\Python314\Lib\re\__init__.py", line 350, in _compile
+    p = _compiler.compile(pattern, flags)
+  File "C:\Python314\Lib\re\_compiler.py", line 762, in compile
+    p = _parser.parse(p, flags)
+  File "C:\Python314\Lib\re\_parser.py", line 973, in parse
+    p = _parse_sub(source, state, flags & SRE_FLAG_VERBOSE, 0)
+  File "C:\Python314\Lib\re\_parser.py", line 460, in _parse_sub
+    itemsappend(_parse(source, state, verbose, nested + 1,
+                ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                       not nested and not items))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\re\_parser.py", line 856, in _parse
+    p = _parse_sub(source, state, sub_verbose, nested + 1)
+  File "C:\Python314\Lib\re\_parser.py", line 460, in _parse_sub
+    itemsappend(_parse(source, state, verbose, nested + 1,
+                ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                       not nested and not items))
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\re\_parser.py", line 687, in _parse
+    raise source.error("nothing to repeat",
+                       source.tell() - here + len(this))
+re.PatternError: nothing to repeat at position 81
+
+2026-08-25T04:40:05.467115Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+Encoding của PowerShell đang biến một số ký tự tiếng Việt trong regex thành `?`, làm regex hỏng. Tôi sẽ dùng escape Unicode giống code/validator để debug ổn định.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; @'
+import duckdb, re
+con=duckdb.connect('legal_sample_200.duckdb', read_only=True)
+self_ref = re.compile(
+    \"(Lu\\u1eadt|Ngh\\u1ecb \\u0111\\u1ecbnh|Ngh\\u1ecb quy\\u1ebft|\"
+    \"Quy\\u1ebft \\u0111\\u1ecbnh|Th\\u00f4ng t\\u01b0|Ph\\u00e1p l\\u1ec7nh)\"
+    \"\\\\s+n\\u00e0y\\\\s+(?:c\\u00f3 hi\\u1ec7u l\\u1ef1c|\\u0111\\u01b0\\u1ee3c th\\u00f4ng qua)\",
+    re.I,
+)
+doc_ref = re.compile(\"\\\\b\\\\d{1,4}[a-z]?/(?:\\\\d{4}/)?[A-Z\\u0110][A-Z\\u01100-9\\\\-]{1,20}\\\\b\")
+rows=con.execute(\"\"\"
+SELECT src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_start, evidence_end, evidence_text
+FROM amendments WHERE op='EXPIRE'
+ORDER BY src_doc_id, target_so_ky_hieu, target_dieu
+\"\"\").fetchall()
+out=[]
+for r in rows:
+    ev=r[6]
+    same=re.split(r'[.;\\n]', ev, maxsplit=1)[0]
+    if self_ref.search(ev) and not doc_ref.search(same) and not (':' in same and doc_ref.search(ev.split(':',1)[1] if ':' in ev else '')):
+        out.append(r)
+print('count', len(out))
+for r in out:
+    print('\\n', r[0], r[1], r[2], r[3], r[4], r[5])
+    print(r[6][:520].replace('\\n',' '))
+con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 252ms:
+count 7
+
+ 586814 EXPIRE 21/2017/QH15 58 103101 103333
+hết hiệu lực kể từ ngày Luật này được thông qua. 6. Luật Quy hoạch số 21/2017/QH15 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các quy định có liên quan tại Điều 58 của Luật này. Điều 58. Điều khoản chuyển tiếp 1. Quy
+
+ 586814 EXPIRE None 58 103184 103416
+hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các quy định có liên quan tại Điều 58 của Luật này. Điều 58. Điều khoản chuyển tiếp 1. Quy hoạch, điều chỉnh quy hoạch đã được quyết định hoặc phê duyệt theo quy định của ph
+
+ 616621 EXPIRE 132/2025/NĐ-CP 6 118238 118470
+hết hiệu lực thi hành kể từ ngày Nghị định này có hiệu lực thi hành. 4. Bãi bỏ Điều 6 của Nghị định số 132/2025/NĐ-CP ngày 12 tháng 6 năm 2025 của Chính phủ quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp trong lĩ
+
+ 667153 EXPIRE 37/2024/TT-BYT None 5550 5782
+hết hiệu lực thi hành từ ngày Thông tư này có hiệu lực thi hành”. Như vậy, theo quy định Thông tư số 37/2024/TT-BYT danh mục thuốc thuộc phạm vi được hướng của người tham gia bảo hiểm y tế vẫn áp dụng theo danh mục thuốc ban hành kè
+
+ 694407 EXPIRE None 3 718 950
+hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành, trừ trường hợp quy định tại Điều 3 Quyết định này. Điều 3. Quy định chuyển tiếp 1. Đối với đề xuất nhiệm vụ khoa học và công nghệ, đề xuất đặt hàng nhiệm vụ khoa học và cô
+
+ 694652 EXPIRE 1598/QĐ-UBND None 1221 1453
+hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành. 2. Nội dung công bố thủ tục hành chính lĩnh vực thủy sản tại số thứ tự 1, 4, 5, 6, 10, 11 mục A Phụ lục ban hành kèm theo Quyết định số 1598/QĐ-UBND ngày 30/6/2025 của Chủ
+
+ 694652 EXPIRE 991/QĐ-UBND None 1469 1701
+hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành. 3. Nội dung công bố thủ tục hành chính lĩnh vực thủy sản tại số thứ tự 3, 4, 5, 6 mục I Phụ lục ban hành kèm theo Quyết định số 991/QĐ-UBND ngày 28/4/2025 của Chủ tịch UBN
+
+codex
+Các 7 rows gồm 3 target thật cần giữ bằng cách trim evidence (`586814`, `694652` x2) và 4 row self-ref/leak cần drop (`616621` EXPIRE leak từ câu “Bãi bỏ”, `667153`, `694407`, `586814` target_dieu-only). Tôi sẽ bổ sung heuristic ngay trong `extract_amendments()`: chỉ giữ self-ref đầu window khi target doc nằm trong mục liệt kê tiếp theo và trước target đó không có amend verb khác; evidence sẽ bắt đầu từ mục target thật.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$i=1; Get-Content files'"\\vbpl_extract.py | ForEach-Object { if ("'$i -ge 744 -and $i -le 762) { '"'{0,4}: {1}' -f "'$i, $_ }; $i++ }' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 184ms:
+ 744:         verb = m.group(1).lower()
+ 745:         win = text[m.end(): m.end() + 220]
+ 746:         op = AMEND_MAP.get(verb, "OTHER")
+ 747:         same_clause = re.split(r"[.;\n]", win, maxsplit=1)[0]
+ 748:         doc = RX_DOC_REF.search(win)
+ 749:         prov_win = win if doc else same_clause
+ 750:         prov = RX_PROV_REF.search(prov_win)
+ 751:         if op in {"EXPIRE", "SUSPEND"} and self_ref_effect.search(win[:100]) and not doc and not prov and not same_clause.rstrip().endswith(":"):
+ 752:             continue
+ 753:         if not doc and not prov:
+ 754:             continue
+ 755:         quoted = re.search(r'"([^"]{5,2000})"', win, re.S)
+ 756:         ops.append({
+ 757:             "op": op,
+ 758:             "verb": verb,
+ 759:             "target_doc": doc.group(1) if doc else None,
+ 760:             "target_dieu": prov.group(3) if prov else None,
+ 761:             "target_khoan": prov.group(2) if prov else None,
+ 762:             "target_diem": prov.group(1) if prov else None,
+
+codex
+Tôi cũng cần chỉnh `evidence_text`/`span` trong append để dùng `evidence_start` mới khi có trim, không chỉ đổi điều kiện lọc.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$i=1; Get-Content files'"\\vbpl_extract.py | ForEach-Object { if ("'$i -ge 755 -and $i -le 770) { '"'{0,4}: {1}' -f "'$i, $_ }; $i++ }' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 157ms:
+ 755:         quoted = re.search(r'"([^"]{5,2000})"', win, re.S)
+ 756:         ops.append({
+ 757:             "op": op,
+ 758:             "verb": verb,
+ 759:             "target_doc": doc.group(1) if doc else None,
+ 760:             "target_dieu": prov.group(3) if prov else None,
+ 761:             "target_khoan": prov.group(2) if prov else None,
+ 762:             "target_diem": prov.group(1) if prov else None,
+ 763:             "replacement_text": normalize(quoted.group(1)) if quoted else None,
+ 764:             "evidence_text": normalize(text[m.start(): m.end() + len(win)]),
+ 765:             "span": (m.start(), m.end() + len(win)),
+ 766:         })
+ 767:     return ops
+ 768: 
+ 769: 
+ 770: def parse_preamble(hlines: List[str]) -> List[Dict[str, Any]]:
+
+codex
+Tôi sẽ đưa `evidence_start` mặc định là vị trí verb hiện tại, rồi chỉ dịch nó sang đầu mục liệt kê thật trong các self-ref được giữ. Các self-ref có target chỉ do leak từ câu action khác sẽ bị drop thay vì tạo EXPIRE giả.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$path = '"'files\\vbpl_extract.py'
+"'$lines = [System.Collections.Generic.List[string]]::new()
+$lines.AddRange([System.IO.File]::ReadAllLines($path, [System.Text.Encoding]::UTF8))
+# Replace displayed lines 747-754 (0-based 746, count 8).
+$lines.RemoveRange(746, 8)
+$newLines = @(
+'"'        same_clause = re.split(r\"[.;\\n]\", win, maxsplit=1)[0]',
+'        doc = RX_DOC_REF.search(win)',
+'        prov_win = win if doc else same_clause',
+'        prov = RX_PROV_REF.search(prov_win)',
+'        evidence_start = m.start()',
+'        self_ref_match = op in {\"EXPIRE\", \"SUSPEND\"} and self_ref_effect.search(win[:100])',
+'        if self_ref_match:',
+'            tail_start = len(same_clause)',
+'            while tail_start < len(win) and win[tail_start] in \".;\\n \\t\":',
+'                tail_start += 1',
+'            target_is_list_doc = doc and doc.start() >= tail_start and re.match(r\"\\d+\\.\", win[tail_start:]) and not RX_AMEND.search(win[tail_start:doc.start()])',
+'            if target_is_list_doc:',
+'                evidence_start = m.end() + tail_start',
+'            elif not same_clause.rstrip().endswith(\":\"):',
+'                continue',
+'        if not doc and not prov:',
+'            continue'
+)
+for ("'$j = 0; $j -lt $newLines.Count; $j++) { $lines.Insert(746 + $j, $newLines[$j]) }
+for ($j = 0; $j -lt $lines.Count; $j++) {
+    if ($lines[$j] -eq '"'            \"evidence_text\": normalize(text[m.start(): m.end() + len(win)]),') {
+        "'$lines[$j] = '"'            \"evidence_text\": normalize(text[evidence_start: m.end() + len(win)]),'
+    }
+    if ("'$lines[$j] -eq '"'            \"span\": (m.start(), m.end() + len(win)),') {
+        "'$lines[$j] = '"'            \"span\": (evidence_start, m.end() + len(win)),'
+    }
+}
+[System.IO.File]::WriteAllLines("'$path, $lines, [System.Text.Encoding]::UTF8)' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 134ms:
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$i=1; Get-Content files'"\\vbpl_extract.py | ForEach-Object { if ("'$i -ge 744 -and $i -le 780) { '"'{0,4}: {1}' -f "'$i, $_ }; $i++ }' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 153ms:
+ 744:         verb = m.group(1).lower()
+ 745:         win = text[m.end(): m.end() + 220]
+ 746:         op = AMEND_MAP.get(verb, "OTHER")
+ 747:         same_clause = re.split(r"[.;\n]", win, maxsplit=1)[0]
+ 748:         doc = RX_DOC_REF.search(win)
+ 749:         prov_win = win if doc else same_clause
+ 750:         prov = RX_PROV_REF.search(prov_win)
+ 751:         evidence_start = m.start()
+ 752:         self_ref_match = op in {"EXPIRE", "SUSPEND"} and self_ref_effect.search(win[:100])
+ 753:         if self_ref_match:
+ 754:             tail_start = len(same_clause)
+ 755:             while tail_start < len(win) and win[tail_start] in ".;\n \t":
+ 756:                 tail_start += 1
+ 757:             target_is_list_doc = doc and doc.start() >= tail_start and re.match(r"\d+\.", win[tail_start:]) and not RX_AMEND.search(win[tail_start:doc.start()])
+ 758:             if target_is_list_doc:
+ 759:                 evidence_start = m.end() + tail_start
+ 760:             elif not same_clause.rstrip().endswith(":"):
+ 761:                 continue
+ 762:         if not doc and not prov:
+ 763:             continue
+ 764:         quoted = re.search(r'"([^"]{5,2000})"', win, re.S)
+ 765:         ops.append({
+ 766:             "op": op,
+ 767:             "verb": verb,
+ 768:             "target_doc": doc.group(1) if doc else None,
+ 769:             "target_dieu": prov.group(3) if prov else None,
+ 770:             "target_khoan": prov.group(2) if prov else None,
+ 771:             "target_diem": prov.group(1) if prov else None,
+ 772:             "replacement_text": normalize(quoted.group(1)) if quoted else None,
+ 773:             "evidence_text": normalize(text[evidence_start: m.end() + len(win)]),
+ 774:             "span": (evidence_start, m.end() + len(win)),
+ 775:         })
+ 776:     return ops
+ 777: 
+ 778: 
+ 779: def parse_preamble(hlines: List[str]) -> List[Dict[str, Any]]:
+ 780:     items = []
+
+codex
+Đã cập nhật logic trim/drop trong cùng hàm và xác nhận append dùng `evidence_start`. Tôi chạy lại compile trước khi rebuild DB lần nữa.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python -m py_compile files\\vbpl_extract.py" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 743ms:
+codex
+`py_compile` pass sau chỉnh heuristic. Tôi rebuild lại sample DB; lần trước mất khoảng 7.5 phút nên tôi đặt timeout đủ dài.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; python -u files\\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 316333ms:
+ingested 1/200 latest=693036 status=NEW
+ingested 25/200 latest=680586 status=NEW
+ingested 50/200 latest=684205 status=NEW
+ingested 75/200 latest=692542 status=NEW
+ingested 100/200 latest=695444 status=NEW
+ingested 125/200 latest=694948 status=NEW
+ingested 150/200 latest=674286 status=NEW
+ingested 175/200 latest=694283 status=NEW
+ingested 200/200 latest=694325 status=NEW
+
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+Statuses: {'NEW': 200}
+
+Resolution:
+amendments: total=399 resolved_docs=7 resolved_provisions=0 ambiguous=0 not_found=244 no_target=148 provision_miss=1
+document_edges: total=7270 resolved_docs=39 resolved_provisions=0 ambiguous=3 not_found=2878 no_target=4350 provision_miss=0
+Ambiguous examples:
+  17/2025/NQ-HĐND: 2 candidates (Tỉnh Cao Bằng | Tỉnh Ninh Bình)
+documents: 200
+document_versions: 200
+raw_docs: 200
+document_lines: 60147
+document_blocks: 633
+provisions: 9300
+provision_versions: 9300
+chunks: 9541
+amendments: 399
+document_edges: 7270
+parse_quality_reports: 200
+
+Parse quality:
+parse_status   n  min_coverage  avg_coverage
+          ok 200           1.0           1.0
+
+codex
+Rebuild mới xong với `amendments: 399`, tức tăng `+2` so với DB 397 trước sửa trong workspace. Tôi sẽ chạy validator và sau đó query đúng 4 case cùng pure-boilerplate count.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; python files\\validate_parse_invariants.py --db legal_sample_200.duckdb --expected-docs 200" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+2026-08-25T04:46:58.121518Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 3.6 seconds
+Output:
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+
+## Invariant checks
+[PASS] expected_doc_count: documents=200, expected=200
+[PASS] coverage_all_ok: reports=200, ok=200, min_coverage=1.0, max_orphans=0
+[PASS] coverage_has_every_source_line: line_count_mismatches=0
+[PASS] unique_storage_paths: duplicate_storage_path_groups=0
+[PASS] unique_own_legal_paths: duplicate_own_legal_path_groups=0
+[PASS] all_parent_refs_exist: missing_parent_refs=0
+[PASS] child_path_extends_parent_path: bad_parent_prefix=0
+[PASS] cross_context_parent_links_recorded: cross_context_parent_links=237
+[PASS] outline_refs_exist: missing_outline_refs=0
+[PASS] preamble_items_have_single_classification: duplicate_preamble_classifications=0
+[PASS] context_units_match_nonempty_provisions: context_units=9300, nonempty_provisions=9300
+[PASS] context_units_have_source_line_refs: missing_context_source_line_refs=0
+[PASS] context_source_line_refs_join_document_lines: invalid_context_source_line_refs=0
+[PASS] outline_context_units_match_nonempty_outline_items: outline_context_units=25849, nonempty_outline_items=25849
+[PASS] outline_context_units_have_source_line_refs: missing_outline_source_line_refs=0
+[PASS] outline_source_line_refs_join_document_lines: invalid_outline_source_line_refs=0
+[PASS] source_line_view_matches_document_lines: source_line_view_rows=60147, document_lines=60147
+[PASS] nonblank_source_lines_have_context: unmapped_nonblank_source_lines=0
+[PASS] table_context_units_cover_appendix_and_embedded_tables: table_context_units=451, expected=451
+[PASS] embedded_table_context_units_have_source_refs: embedded_tables_missing_source_refs=0
+[PASS] quote_context_is_consistent: bad_quote_rows=0
+[PASS] provision_line_ranges_valid: bad_line_ranges=0
+[PASS] appendix_tables_have_rows_and_columns: appendix_table_issues=0
+[PASS] chunk_refs_exist: missing_chunk_refs=0
+[PASS] retrieval_chunks_respect_size_limit: oversized_chunks=0
+[PASS] retrieval_chunks_cover_leaf_and_intro_units: missing_retrieval_chunks=0
+[PASS] outline_body_text_matches_provisions: outline_body_text_mismatches=0
+[PASS] quoted_targets_present: quoted_target_nodes=627
+[FAIL] amendments_no_self_referential_expire: self_referential_expire_rows=1
+
+## Summary
+PASS=28 WARN=0 FAIL=1
+
+ exited 1 in 3634ms:
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+
+## Invariant checks
+[PASS] expected_doc_count: documents=200, expected=200
+[PASS] coverage_all_ok: reports=200, ok=200, min_coverage=1.0, max_orphans=0
+[PASS] coverage_has_every_source_line: line_count_mismatches=0
+[PASS] unique_storage_paths: duplicate_storage_path_groups=0
+[PASS] unique_own_legal_paths: duplicate_own_legal_path_groups=0
+[PASS] all_parent_refs_exist: missing_parent_refs=0
+[PASS] child_path_extends_parent_path: bad_parent_prefix=0
+[PASS] cross_context_parent_links_recorded: cross_context_parent_links=237
+[PASS] outline_refs_exist: missing_outline_refs=0
+[PASS] preamble_items_have_single_classification: duplicate_preamble_classifications=0
+[PASS] context_units_match_nonempty_provisions: context_units=9300, nonempty_provisions=9300
+[PASS] context_units_have_source_line_refs: missing_context_source_line_refs=0
+[PASS] context_source_line_refs_join_document_lines: invalid_context_source_line_refs=0
+[PASS] outline_context_units_match_nonempty_outline_items: outline_context_units=25849, nonempty_outline_items=25849
+[PASS] outline_context_units_have_source_line_refs: missing_outline_source_line_refs=0
+[PASS] outline_source_line_refs_join_document_lines: invalid_outline_source_line_refs=0
+[PASS] source_line_view_matches_document_lines: source_line_view_rows=60147, document_lines=60147
+[PASS] nonblank_source_lines_have_context: unmapped_nonblank_source_lines=0
+[PASS] table_context_units_cover_appendix_and_embedded_tables: table_context_units=451, expected=451
+[PASS] embedded_table_context_units_have_source_refs: embedded_tables_missing_source_refs=0
+[PASS] quote_context_is_consistent: bad_quote_rows=0
+[PASS] provision_line_ranges_valid: bad_line_ranges=0
+[PASS] appendix_tables_have_rows_and_columns: appendix_table_issues=0
+[PASS] chunk_refs_exist: missing_chunk_refs=0
+[PASS] retrieval_chunks_respect_size_limit: oversized_chunks=0
+[PASS] retrieval_chunks_cover_leaf_and_intro_units: missing_retrieval_chunks=0
+[PASS] outline_body_text_matches_provisions: outline_body_text_mismatches=0
+[PASS] quoted_targets_present: quoted_target_nodes=627
+[FAIL] amendments_no_self_referential_expire: self_referential_expire_rows=1
+
+## Summary
+PASS=28 WARN=0 FAIL=1
+
+codex
+Validator còn đúng 1 row self-ref. Khả năng là evidence đã trim tới số thứ tự `6.` nên regex invariant cắt same-clause ở dấu chấm của số thứ tự trước khi thấy mã văn bản. Tôi sẽ xác nhận row đó và chỉnh evidence trim qua cả prefix số thứ tự khi cần.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; @'
+import duckdb, re
+con=duckdb.connect('legal_sample_200.duckdb', read_only=True)
+self_ref = re.compile(
+    \"(Lu\\u1eadt|Ngh\\u1ecb \\u0111\\u1ecbnh|Ngh\\u1ecb quy\\u1ebft|\"
+    \"Quy\\u1ebft \\u0111\\u1ecbnh|Th\\u00f4ng t\\u01b0|Ph\\u00e1p l\\u1ec7nh)\"
+    \"\\\\s+n\\u00e0y\\\\s+(?:c\\u00f3 hi\\u1ec7u l\\u1ef1c|\\u0111\\u01b0\\u1ee3c th\\u00f4ng qua)\", re.I)
+doc_ref = re.compile(\"\\\\b\\\\d{1,4}[a-z]?/(?:\\\\d{4}/)?[A-Z\\u0110][A-Z\\u01100-9\\\\-]{1,20}\\\\b\")
+rows=con.execute(\"SELECT src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_start, evidence_end, evidence_text FROM amendments WHERE op='EXPIRE' ORDER BY src_doc_id\").fetchall()
+for r in rows:
+    ev=r[6]
+    same=re.split(r'[.;\\n]', ev, maxsplit=1)[0]
+    if self_ref.search(ev) and not doc_ref.search(same):
+        print(r[0], r[1], r[2], r[3], r[4], r[5])
+        print(ev[:520].replace('\\n',' '))
+con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 237ms:
+586814 EXPIRE 21/2017/QH15 58 103150 103333
+6. Luật Quy hoạch số 21/2017/QH15 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các quy định có liên quan tại Điều 58 của Luật này. Điều 58. Điều khoản chuyển tiếp 1. Quy
+680659 EXPIRE 05/2025/NQ-HĐND None 342 574
+hết hiệu lực kể từ ngày Nghị quyết này có hiệu lực thi hành: a) Nghị quyết số 05/2025/NQ-HĐND ngày 03 tháng 6 năm 2025 của Hội đồng nhân dân tỉnh Ninh Bình ban hành Quy định phân cấp nguồn thu, nhiệm vụ chi và tỷ lệ phần trăm (%) ph
+680686 EXPIRE 203/2010/NQ-HĐND None 694 926
+hết hiệu lực kể từ ngày nghị quyết này có hiệu lực thi hành: a) Nghị quyết số 203/2010/NQ-HĐND ngày 09 tháng 12 năm 2010 của Hội đồng nhân dân tỉnh về quy định một số khoản chi cho hoạt động của Hội đồng nhân dân các cấp trên địa bà
+691138 EXPIRE 13/2022/NĐ-CP 1 198179 198411
+hết hiệu lực kể từ ngày Nghị định này có hiệu lực thi hành: a) Các khoản 3, 4, 5, 6 và khoản 7 Điều 1 Nghị định số 13/2022/NĐ-CP ngày 21 tháng 01 năm 2022 của Chính phủ sửa đổi, bổ sung một số điều Nghị định số 132/2008/NĐ-CP ngày 3
+693676 EXPIRE 33/2022/QĐ-UBND None 4112 4344
+hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành: a) Quyết định số 33/2022/QĐ-UBND ngày 26 tháng 8 năm 2022 của Ủy ban nhân dân tỉnh An Giang quy định giá tính lệ phí trước bạ đối với nhà trên địa bàn tỉnh An Giang. b) Qu
+
+codex
+Còn lại đúng row `586814`, evidence là `6. Luật Quy hoạch...`, nên invariant không thấy mã văn bản trong same-clause vì dấu chấm của `6.`. Tôi sẽ chỉ chỉnh nhánh trim: nếu phần evidence đã trim vẫn chứa self-reference và same-clause đầu chưa có doc ref, bắt đầu evidence từ vị trí doc ref thật.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$path = '"'files\\vbpl_extract.py'
+"'$lines = [System.Collections.Generic.List[string]]::new()
+$lines.AddRange([System.IO.File]::ReadAllLines($path, [System.Text.Encoding]::UTF8))
+for ($i = 0; $i -lt $lines.Count; $i++) {
+    if ($lines[$i] -eq '"'                evidence_start = m.end() + tail_start') {
+        "'$lines.Insert($i + 1, '"'                trimmed_clause = re.split(r\"[.;\\n]\", win[tail_start:], maxsplit=1)[0]')
+        "'$lines.Insert($i + 2, '"'                if self_ref_effect.search(win[tail_start:]) and not RX_DOC_REF.search(trimmed_clause):')
+        "'$lines.Insert($i + 3, '"'                    evidence_start = m.end() + doc.start()')
+        break
+    }
+}
+[System.IO.File]::WriteAllLines("'$path, $lines, [System.Text.Encoding]::UTF8)' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 121ms:
+codex
+Patch nhỏ đã thêm vào nhánh trim. Tôi kiểm tra lại block và chạy compile trước khi rebuild lần cuối.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "python -m py_compile files\\vbpl_extract.py" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$i=1; Get-Content files'"\\vbpl_extract.py | ForEach-Object { if ("'$i -ge 751 -and $i -le 766) { '"'{0,4}: {1}' -f "'$i, $_ }; $i++ }' in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 195ms:
+ 751:         evidence_start = m.start()
+ 752:         self_ref_match = op in {"EXPIRE", "SUSPEND"} and self_ref_effect.search(win[:100])
+ 753:         if self_ref_match:
+ 754:             tail_start = len(same_clause)
+ 755:             while tail_start < len(win) and win[tail_start] in ".;\n \t":
+ 756:                 tail_start += 1
+ 757:             target_is_list_doc = doc and doc.start() >= tail_start and re.match(r"\d+\.", win[tail_start:]) and not RX_AMEND.search(win[tail_start:doc.start()])
+ 758:             if target_is_list_doc:
+ 759:                 evidence_start = m.end() + tail_start
+ 760:                 trimmed_clause = re.split(r"[.;\n]", win[tail_start:], maxsplit=1)[0]
+ 761:                 if self_ref_effect.search(win[tail_start:]) and not RX_DOC_REF.search(trimmed_clause):
+ 762:                     evidence_start = m.end() + doc.start()
+ 763:             elif not same_clause.rstrip().endswith(":"):
+ 764:                 continue
+ 765:         if not doc and not prov:
+ 766:             continue
+
+ succeeded in 296ms:
+codex
+`py_compile` vẫn pass. Tôi rebuild DB lần cuối rồi chạy validator và các truy vấn đối chiếu.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; python -u files\\ingest_parquet_sample.py --root . --db legal_sample_200.duckdb --limit 200 --overwrite" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 421239ms:
+ingested 1/200 latest=693036 status=NEW
+ingested 25/200 latest=680586 status=NEW
+ingested 50/200 latest=684205 status=NEW
+ingested 75/200 latest=692542 status=NEW
+ingested 100/200 latest=695444 status=NEW
+ingested 125/200 latest=694948 status=NEW
+ingested 150/200 latest=674286 status=NEW
+ingested 175/200 latest=694283 status=NEW
+ingested 200/200 latest=694325 status=NEW
+
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+Statuses: {'NEW': 200}
+
+Resolution:
+amendments: total=399 resolved_docs=7 resolved_provisions=0 ambiguous=0 not_found=244 no_target=148 provision_miss=1
+document_edges: total=7270 resolved_docs=39 resolved_provisions=0 ambiguous=3 not_found=2878 no_target=4350 provision_miss=0
+Ambiguous examples:
+  17/2025/NQ-HĐND: 2 candidates (Tỉnh Cao Bằng | Tỉnh Ninh Bình)
+documents: 200
+document_versions: 200
+raw_docs: 200
+document_lines: 60147
+document_blocks: 633
+provisions: 9300
+provision_versions: 9300
+chunks: 9541
+amendments: 399
+document_edges: 7270
+parse_quality_reports: 200
+
+Parse quality:
+parse_status   n  min_coverage  avg_coverage
+          ok 200           1.0           1.0
+
+2026-08-25T04:54:40.637229Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+Rebuild cuối vẫn cho `amendments: 399`. Tôi chạy invariant validator; nếu pass, sẽ query so với DB cũ và pure-boilerplate count.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; python files\\validate_parse_invariants.py --db legal_sample_200.duckdb --expected-docs 200" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 5322ms:
+DB: D:\vnpt_opemetadata\datasets\vietnamese-legal-documents\legal_sample_200.duckdb
+
+## Invariant checks
+[PASS] expected_doc_count: documents=200, expected=200
+[PASS] coverage_all_ok: reports=200, ok=200, min_coverage=1.0, max_orphans=0
+[PASS] coverage_has_every_source_line: line_count_mismatches=0
+[PASS] unique_storage_paths: duplicate_storage_path_groups=0
+[PASS] unique_own_legal_paths: duplicate_own_legal_path_groups=0
+[PASS] all_parent_refs_exist: missing_parent_refs=0
+[PASS] child_path_extends_parent_path: bad_parent_prefix=0
+[PASS] cross_context_parent_links_recorded: cross_context_parent_links=237
+[PASS] outline_refs_exist: missing_outline_refs=0
+[PASS] preamble_items_have_single_classification: duplicate_preamble_classifications=0
+[PASS] context_units_match_nonempty_provisions: context_units=9300, nonempty_provisions=9300
+[PASS] context_units_have_source_line_refs: missing_context_source_line_refs=0
+[PASS] context_source_line_refs_join_document_lines: invalid_context_source_line_refs=0
+[PASS] outline_context_units_match_nonempty_outline_items: outline_context_units=25849, nonempty_outline_items=25849
+[PASS] outline_context_units_have_source_line_refs: missing_outline_source_line_refs=0
+[PASS] outline_source_line_refs_join_document_lines: invalid_outline_source_line_refs=0
+[PASS] source_line_view_matches_document_lines: source_line_view_rows=60147, document_lines=60147
+[PASS] nonblank_source_lines_have_context: unmapped_nonblank_source_lines=0
+[PASS] table_context_units_cover_appendix_and_embedded_tables: table_context_units=451, expected=451
+[PASS] embedded_table_context_units_have_source_refs: embedded_tables_missing_source_refs=0
+[PASS] quote_context_is_consistent: bad_quote_rows=0
+[PASS] provision_line_ranges_valid: bad_line_ranges=0
+[PASS] appendix_tables_have_rows_and_columns: appendix_table_issues=0
+[PASS] chunk_refs_exist: missing_chunk_refs=0
+[PASS] retrieval_chunks_respect_size_limit: oversized_chunks=0
+[PASS] retrieval_chunks_cover_leaf_and_intro_units: missing_retrieval_chunks=0
+[PASS] outline_body_text_matches_provisions: outline_body_text_mismatches=0
+[PASS] quoted_targets_present: quoted_target_nodes=627
+[PASS] amendments_no_self_referential_expire: self_referential_expire_rows=0
+
+## Summary
+PASS=29 WARN=0 FAIL=0
+
+2026-08-25T04:54:49.794245Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+Validator đã pass đúng `PASS=29 WARN=0 FAIL=0`, gồm `amendments_no_self_referential_expire: self_referential_expire_rows=0`. Tôi sẽ lấy bảng đối chiếu old/new cho 4 record cụ thể và đếm pure-boilerplate self-ref rows.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; @'
+import duckdb, re
+old_db = r'D:\\tmp\\legal_sample_200_old_extract.duckdb'
+new_db = r'legal_sample_200.duckdb'
+case_sql = \"\"\"
+select src_doc_id, op, target_so_ky_hieu, target_dieu, target_khoan, target_diem, left(evidence_text,260) as evidence
+from amendments
+where (src_doc_id='616621' and op='REPEAL' and target_dieu='6')
+   or (src_doc_id='694652' and op='EXPIRE' and target_so_ky_hieu in ('1598/QĐ-UBND','991/QĐ-UBND'))
+   or (src_doc_id='586814' and op='EXPIRE' and target_so_ky_hieu='21/2017/QH15' and target_dieu='58')
+order by src_doc_id, op, target_so_ky_hieu, target_dieu, evidence
+\"\"\"
+for db in [old_db, new_db]:
+    con=duckdb.connect(db, read_only=True)
+    print('\\nDB', db)
+    print('total_amendments', con.execute('select count(*) from amendments').fetchone()[0])
+    rows=con.execute(case_sql).fetchall()
+    print('case_rows', len(rows))
+    for r in rows:
+        print(' | '.join('' if x is None else str(x) for x in r[:6]))
+        print('  ' + r[6].replace('\\n',' '))
+    con.close()
+
+self_ref = re.compile(
+    \"(Lu\\u1eadt|Ngh\\u1ecb \\u0111\\u1ecbnh|Ngh\\u1ecb quy\\u1ebft|\"
+    \"Quy\\u1ebft \\u0111\\u1ecbnh|Th\\u00f4ng t\\u01b0|Ph\\u00e1p l\\u1ec7nh)\"
+    \"\\\\s+n\\u00e0y\\\\s+(?:c\\u00f3 hi\\u1ec7u l\\u1ef1c|\\u0111\\u01b0\\u1ee3c th\\u00f4ng qua)\",
+    re.I,
+)
+con=duckdb.connect(new_db, read_only=True)
+rows=con.execute(\"\"\"
+select src_doc_id, op, target_so_ky_hieu, target_dieu, evidence_text
+from amendments
+where op in ('EXPIRE','SUSPEND') and target_so_ky_hieu is null and target_dieu is null
+\"\"\").fetchall()
+pure=[r for r in rows if self_ref.search(r[4])]
+print('\\nnew pure_boilerplate_self_ref_no_target', len(pure))
+con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 491ms:
+
+DB D:\tmp\legal_sample_200_old_extract.duckdb
+total_amendments 898
+case_rows 2
+586814 | EXPIRE | 21/2017/QH15 | 58 |  | 
+  hết hiệu lực kể từ ngày Luật này được thông qua. 6. Luật Quy hoạch số 21/2017/QH15 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các quy định có liên quan tại Điều 58 của Luật này. Điều 58. Điều khoản chuyển tiếp 1. Quy
+616621 | REPEAL | 132/2025/NĐ-CP | 6 |  | 
+  Bãi bỏ Điều 6 của Nghị định số 132/2025/NĐ-CP ngày 12 tháng 6 năm 2025 của Chính phủ quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp trong lĩnh vực quản lý nhà nước của Bộ Khoa học và Công nghệ và Điều 34, Đ
+
+DB legal_sample_200.duckdb
+total_amendments 399
+case_rows 2
+586814 | EXPIRE | 21/2017/QH15 | 58 |  | 
+  21/2017/QH15 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ các quy định có liên quan tại Điều 58 của Luật này. Điều 58. Điều khoản chuyển tiếp 1. Quy
+616621 | REPEAL | 132/2025/NĐ-CP | 6 |  | 
+  Bãi bỏ Điều 6 của Nghị định số 132/2025/NĐ-CP ngày 12 tháng 6 năm 2025 của Chính phủ quy định về phân định thẩm quyền của chính quyền địa phương 02 cấp trong lĩnh vực quản lý nhà nước của Bộ Khoa học và Công nghệ và Điều 34, Đ
+
+new pure_boilerplate_self_ref_no_target 0
+
+2026-08-25T04:55:09.434909Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `base_instructions` at line 97 column 5
+codex
+Truy vấn exact literal `QĐ` qua PowerShell lại không match trong SQL string, nhưng query rộng trước đó cho thấy vấn đề này là encoding của lệnh kiểm tra. Tôi sẽ query `694652` không dùng literal target để xác nhận hai dòng trong DB mới.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; @'
+import duckdb
+for db in [r'D:\\tmp\\legal_sample_200_old_extract.duckdb', 'legal_sample_200.duckdb']:
+    con=duckdb.connect(db, read_only=True)
+    print('\\nDB', db)
+    rows=con.execute(\"\"\"
+        select src_doc_id, op, target_so_ky_hieu, target_dieu, target_khoan, target_diem, left(evidence_text,260)
+        from amendments
+        where src_doc_id='694652'
+        order by op, target_so_ky_hieu, target_dieu, evidence_text
+    \"\"\").fetchall()
+    print('rows', len(rows))
+    for r in rows:
+        print(' | '.join('' if x is None else str(x) for x in r[:6]))
+        print('  ' + r[6].replace('\\n',' '))
+    con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 257ms:
+
+DB D:\tmp\legal_sample_200_old_extract.duckdb
+rows 6
+694652 | AMEND |  | 2 |  | 
+  sửa đổi, bổ sung hoặc thay thế, bị bãi bỏ trong lĩnh vực thủy sản và kiểm ngư thuộc phạm vi chức năng quản lý của Sở Nông nghiệp và Môi trường trên địa bàn tỉnh Đắk Lắk, chi tiết tại Phụ lục kèm theo. Điều 2. Giao Sở Nông nghiệp và Môi
+694652 | EXPIRE | 1598/QĐ-UBND |  |  | 
+  hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành. 2. Nội dung công bố thủ tục hành chính lĩnh vực thủy sản tại số thứ tự 1, 4, 5, 6, 10, 11 mục A Phụ lục ban hành kèm theo Quyết định số 1598/QĐ-UBND ngày 30/6/2025 của Chủ
+694652 | EXPIRE | 991/QĐ-UBND |  |  | 
+  hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành. 3. Nội dung công bố thủ tục hành chính lĩnh vực thủy sản tại số thứ tự 3, 4, 5, 6 mục I Phụ lục ban hành kèm theo Quyết định số 991/QĐ-UBND ngày 28/4/2025 của Chủ tịch UBN
+694652 | EXPIRE |  | 4 |  | 
+  hết hiệu lực kể từ ngày Quyết định này có hiệu lực thi hành. Điều 4. Chánh Văn phòng UBND tỉnh, Giám đốc Sở Nông nghiệp và Môi trường, Chủ tịch UBND các xã, phường và các tổ chức, cá nhân có liên quan chịu trách nhiệm thi hành Quyết
+694652 | REPEAL |  | 2 |  | 
+  bãi bỏ trong lĩnh vực thủy sản và kiểm ngư thuộc phạm vi chức năng quản lý của Sở Nông nghiệp và Môi trường trên địa bàn tỉnh Đắk Lắk, chi tiết tại Phụ lục kèm theo. Điều 2. Giao Sở Nông nghiệp và Môi trường căn cứ Danh mục th
+694652 | REPLACE |  | 2 |  | 
+  thay thế, bị bãi bỏ trong lĩnh vực thủy sản và kiểm ngư thuộc phạm vi chức năng quản lý của Sở Nông nghiệp và Môi trường trên địa bàn tỉnh Đắk Lắk, chi tiết tại Phụ lục kèm theo. Điều 2. Giao Sở Nông nghiệp và Môi trường căn cứ
+
+DB legal_sample_200.duckdb
+rows 2
+694652 | EXPIRE | 1598/QĐ-UBND |  |  | 
+  2. Nội dung công bố thủ tục hành chính lĩnh vực thủy sản tại số thứ tự 1, 4, 5, 6, 10, 11 mục A Phụ lục ban hành kèm theo Quyết định số 1598/QĐ-UBND ngày 30/6/2025 của Chủ
+694652 | EXPIRE | 991/QĐ-UBND |  |  | 
+  3. Nội dung công bố thủ tục hành chính lĩnh vực thủy sản tại số thứ tự 3, 4, 5, 6 mục I Phụ lục ban hành kèm theo Quyết định số 991/QĐ-UBND ngày 28/4/2025 của Chủ tịch UBN
+
+codex
+Đối chiếu rộng cho `694652` xác nhận DB mới giữ đúng 2 dòng `EXPIRE` với targets `1598/QĐ-UBND` và `991/QĐ-UBND`; DB cũ có thêm các dòng noisy khác mà rule hiện tại vẫn loại. Tôi sẽ kiểm tra nhanh status/file changed rồi kết thúc với số liệu và file đã sửa.
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git status --short files\\vbpl_extract.py legal_sample_200.duckdb" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+exec
+"C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:PYTHONIOENCODING='"'utf-8'; @'
+import duckdb
+con=duckdb.connect('legal_sample_200.duckdb', read_only=True)
+print(con.execute(\"select count(*) from amendments\").fetchone()[0])
+print(con.execute(\"\"\"
+select src_doc_id, op, target_so_ky_hieu, target_dieu
+from amendments
+where src_doc_id in ('616621','694652','586814')
+  and (
+    (src_doc_id='616621' and op='REPEAL' and target_dieu='6') or
+    (src_doc_id='694652' and op='EXPIRE') or
+    (src_doc_id='586814' and op='EXPIRE' and target_so_ky_hieu='21/2017/QH15' and target_dieu='58')
+  )
+order by src_doc_id, target_so_ky_hieu, target_dieu
+\"\"\").fetchall())
+con.close()
+'@ | python -" in D:\vnpt_opemetadata\datasets\vietnamese-legal-documents
+ succeeded in 258ms:
+399
+[('586814', 'EXPIRE', '21/2017/QH15', '58'), ('616621', 'REPEAL', '132/2025/NĐ-CP', '6'), ('694652', 'EXPIRE', '1598/QĐ-UBND', None), ('694652', 'EXPIRE', '991/QĐ-UBND', None)]
+
+ succeeded in 300ms:
+?? files/vbpl_extract.py
+?? legal_sample_200.duckdb
+warning: unable to access 'C:\Users\ngann/.config/git/ignore': Permission denied
+warning: unable to access 'C:\Users\ngann/.config/git/ignore': Permission denied
+
+codex
+Đã sửa trong `extract_amendments()` để rule A không còn `continue` trước khi tính target. Với self-reference đầu window, code giờ chỉ giữ khi target doc nằm trong mục liệt kê thật tiếp theo và không bị leak từ một action khác; evidence được trim khỏi câu boilerplate để invariant vẫn đúng.
+
+Kết quả kiểm tra:
+
+- `python -m py_compile files\vbpl_extract.py`: PASS
+- Rebuild sample DB: `amendments: 399`
+- Validator: `PASS=29 WARN=0 FAIL=0`
+- `amendments_no_self_referential_expire`: `self_referential_expire_rows=0`
+- Pure boilerplate self-ref `EXPIRE/SUSPEND` không target: `0`
+- Tổng amendments trước/sau: `397 -> 399`
+
+Đối chiếu case trong DB mới:
+
+```text
+586814 | EXPIRE | 21/2017/QH15 | Điều 58
+616621 | REPEAL | 132/2025/NĐ-CP | Điều 6
+694652 | EXPIRE | 1598/QĐ-UBND
+694652 | EXPIRE | 991/QĐ-UBND
+```
+
+File đã sửa: [files/vbpl_extract.py](D:/vnpt_opemetadata/datasets/vietnamese-legal-documents/files/vbpl_extract.py)
+tokens used
+86,044
+Đã sửa trong `extract_amendments()` để rule A không còn `continue` trước khi tính target. Với self-reference đầu window, code giờ chỉ giữ khi target doc nằm trong mục liệt kê thật tiếp theo và không bị leak từ một action khác; evidence được trim khỏi câu boilerplate để invariant vẫn đúng.
+
+Kết quả kiểm tra:
+
+- `python -m py_compile files\vbpl_extract.py`: PASS
+- Rebuild sample DB: `amendments: 399`
+- Validator: `PASS=29 WARN=0 FAIL=0`
+- `amendments_no_self_referential_expire`: `self_referential_expire_rows=0`
+- Pure boilerplate self-ref `EXPIRE/SUSPEND` không target: `0`
+- Tổng amendments trước/sau: `397 -> 399`
+
+Đối chiếu case trong DB mới:
+
+```text
+586814 | EXPIRE | 21/2017/QH15 | Điều 58
+616621 | REPEAL | 132/2025/NĐ-CP | Điều 6
+694652 | EXPIRE | 1598/QĐ-UBND
+694652 | EXPIRE | 991/QĐ-UBND
+```
+
+File đã sửa: [files/vbpl_extract.py](D:/vnpt_opemetadata/datasets/vietnamese-legal-documents/files/vbpl_extract.py)

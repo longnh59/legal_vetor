@@ -1,0 +1,438 @@
+[
+  {
+    "text": "BỘ TÀI CHÍNH, BỘ THƯƠNG MẠI\n Số : 04 /LB-TC.TM\n \n CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM\n Độc lập - tự do - hạnh phúc\n ------------------------------\n \n \n \n \n Hà nội ngày 9 tháng 1 năm 1993",
+    "tag": "table",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": true,
+    "is_center": false,
+    "is_table": true,
+    "html_raw": "<table border=\"0\" style=\"width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 20px; border: none;\">\n <tbody>\n <tr>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">BỘ TÀI CHÍNH, BỘ THƯƠNG MẠI</span></p>\n <p><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Số : 04 /LB-TC.TM</span></p></td>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong></span></p>\n <p><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Độc lập - tự do - hạnh phúc</span></p>\n <p><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">------------------------------</span></p></td>\n </tr>\n <tr>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\"></td>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><em>Hà nội ngày 9 tháng 1 năm 1993</em></span></p></td>\n </tr>\n </tbody>\n </table>\n ",
+    "dom_order": 0,
+    "anchors": []
+  },
+  {
+    "text": "THÔNG TƯ LIÊN BỘ",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<p align=\"center\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: center;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>THÔNG TƯ LIÊN BỘ</strong></span></p>\n ",
+    "dom_order": 1,
+    "anchors": []
+  },
+  {
+    "text": "VỀ KẾT QUẢ THANH TRA TÀI CHÍNH Ở TỔNG CÔNG TY MÁY VÀ PHỤ TÙNG",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: center;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">VỀ KẾT QUẢ THANH TRA TÀI CHÍNH Ở TỔNG CÔNG TY MÁY VÀ PHỤ TÙNG</span></p>\n ",
+    "dom_order": 2,
+    "anchors": []
+  },
+  {
+    "text": "Thực hiện Công văn số 1371 /TC - TTr ngày 28 tháng 7 năm 1992 của Bộ trưởng Bộ Tài chính về việc tiếp tục phúc tra việc thực hiện kiến nghị thanh tra năm 1991 và thanh tra tiếp đến hết quý I năm 1992 tại Tổng Công ty Máy và phụ tùng, Thanh tra Bộ Tài chính đã tiến hành thanh tra từ ngày 3/8/1992 và kết thúc ngày 18/9/1992.",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Thực hiện Công văn số 1371 /TC - TTr ngày 28 tháng 7 năm 1992 của Bộ trưởng Bộ Tài chính về việc tiếp tục phúc tra việc thực hiện kiến nghị thanh tra năm 1991 và thanh tra tiếp đến hết quý I năm 1992 tại Tổng Công ty Máy và phụ tùng, Thanh tra Bộ Tài chính đã tiến hành thanh tra từ ngày 3/8/1992 và kết thúc ngày 18/9/1992.</span></p>\n ",
+    "dom_order": 3,
+    "anchors": []
+  },
+  {
+    "text": "Sau khi nghe báo cáo kết quả thanh tra, hai Bộ trưởng Bộ Tài chính và Thương mại cùng thống nhất báo cáo Thủ tướng Chính phủ các kết luận những sai phạm chính cần xử lý và những vấn đề cần chấn chỉnh.",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Sau khi nghe báo cáo kết quả thanh tra, hai Bộ trưởng Bộ Tài chính và Thương mại cùng thống nhất báo cáo Thủ tướng Chính phủ các kết luận những sai phạm chính cần xử lý và những vấn đề cần chấn chỉnh.</span></p>\n ",
+    "dom_order": 4,
+    "anchors": []
+  },
+  {
+    "text": "Trong điều kiện thay đổi cơ chế quản lý, Tổng công ty đã cố gắng thực hiện nhiệm vụ kinh doanh góp phần tích luỹ nộp Ngân sách Nhà nước. Tổng công ty đã quyết định giá bán hàng nhập khẩu theo Nghị định thư từng thời điểm, trong năm 1991 và quý I năm 1992 thu chênh lệch giá 60 tỷ đồng so với giá theo Quyết định số 266/VGNN ngày 7/5/1990 của Uỷ ban Vật giá Nhà nước, đảm bảo công ăn việc làm cho cán bộ công nhân viên. Tổng công ty đã thực hiện một số kiến nghị của Thanh tra tài chính ở biên bản thanh tra năm 1990 như nộp Ngân sách Nhà nước, có văn bản chấn chỉnh công tác quản lý. Song, Tổng công ty còn một số khuyết điểm cần xử lý và những tồn tại trong quản lý cần chấn chỉnh như sau:",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Trong điều kiện thay đổi cơ chế quản lý, Tổng công ty đã cố gắng thực hiện nhiệm vụ kinh doanh góp phần tích luỹ nộp Ngân sách Nhà nước. Tổng công ty đã quyết định giá bán hàng nhập khẩu theo Nghị định thư từng thời điểm, trong năm 1991 và quý I năm 1992 thu chênh lệch giá 60 tỷ đồng so với giá theo Quyết định số 266/VGNN ngày 7/5/1990 của Uỷ ban Vật giá Nhà nước, đảm bảo công ăn việc làm cho cán bộ công nhân viên. Tổng công ty đã thực hiện một số kiến nghị của Thanh tra tài chính ở biên bản thanh tra năm 1990 như nộp Ngân sách Nhà nước, có văn bản chấn chỉnh công tác quản lý. Song, Tổng công ty còn một số khuyết điểm cần xử lý và những tồn tại trong quản lý cần chấn chỉnh như sau:</span></p>\n ",
+    "dom_order": 5,
+    "anchors": []
+  },
+  {
+    "text": "I/ MỘT SỐ TỒN TẠI KHUYẾT ĐIỂM TRONG CÔNG TÁC QUẢN LÝ TÀI CHÍNH CẦN ĐƯỢC XỬ LÝ.",
+    "tag": "p",
+    "classes": [
+      "prov-part"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<p id=\"7567de80-2d49-11f1-bf58-73d9ca846606\" class=\"prov-part\" align=\"center\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: center;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">I/ MỘT SỐ TỒN TẠI KHUYẾT ĐIỂM TRONG CÔNG TÁC QUẢN LÝ TÀI CHÍNH CẦN ĐƯỢC XỬ LÝ.</span></p>\n ",
+    "dom_order": 6,
+    "anchors": []
+  },
+  {
+    "text": "1/ Bán và quản lý tiền bán hàng nhập khẩu theo Nghị định thư.",
+    "tag": "p",
+    "classes": [
+      "prov-section"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"7568c8e0-2d49-11f1-8fab-a5735ee5d1eb\" class=\"prov-section\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: left;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">1/ Bán và quản lý tiền bán hàng nhập khẩu theo Nghị định thư.</span></p>\n ",
+    "dom_order": 7,
+    "anchors": []
+  },
+  {
+    "text": "Tổng công ty có nghĩa vụ trực tiếp thanh toán với Ngân sách Nhà nước về hàng và tiền bán hàng nhập khẩu theo Nghị định thư. Trong thực tế hàng nhập khẩu theo Nghị định thư được bán tại Văn phòng Tổng công ty và Công ty xuất nhập khẩu Máy Thành phố Hồ Chí Minh (là dơn vị trực thuộc Tổng công ty, có tư cách pháp nhân).",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Tổng công ty có nghĩa vụ trực tiếp thanh toán với Ngân sách Nhà nước về hàng và tiền bán hàng nhập khẩu theo Nghị định thư. Trong thực tế hàng nhập khẩu theo Nghị định thư được bán tại Văn phòng Tổng công ty và Công ty xuất nhập khẩu Máy Thành phố Hồ Chí Minh (là dơn vị trực thuộc Tổng công ty, có tư cách pháp nhân).</span></p>\n ",
+    "dom_order": 8,
+    "anchors": []
+  },
+  {
+    "text": "Tính hết quý I năm 1992 và đến 15/4 do báo cáo thiếu số thực thu và chậm nộp Ngân sách về tiền bán hàng nhập khẩu theo Nghị định thư Tổng công ty chưa nộp Ngân sách Nhà nước 18,592 triệu đồng, phát sinh ở Công ty Miền Nam và đã sử dụng một số khoản không đúng : Công ty xuất nhập khẩu Máy Thành phố Hồ Chí Minh chi cho hoạt động tự doanh 18.047 triệu đồng (trong đó mua ngoại tệ trả nợ nước ngoài 10.640 triệu đồng).",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Tính hết quý I năm 1992 và đến 15/4 do báo cáo thiếu số thực thu và chậm nộp Ngân sách về tiền bán hàng nhập khẩu theo Nghị định thư Tổng công ty chưa nộp Ngân sách Nhà nước 18,592 triệu đồng, phát sinh ở Công ty Miền Nam và đã sử dụng một số khoản không đúng : Công ty xuất nhập khẩu Máy Thành phố Hồ Chí Minh chi cho hoạt động tự doanh 18.047 triệu đồng (trong đó mua ngoại tệ trả nợ nước ngoài 10.640 triệu đồng).</span></p>\n ",
+    "dom_order": 9,
+    "anchors": []
+  },
+  {
+    "text": "2/ Nguyễn Tiến - Kế toán của Công ty xuất nhập khẩu Máy Thành phố Hồ Chí Minh tham mưu cho Công ty ký giảm giá bán hàng cho người mua 213 triệu đồng để nhận lại từ người mua 163 triệu đồng.",
+    "tag": "p",
+    "classes": [
+      "prov-section"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"7568c8e0-2d49-11f1-8fab-a5735ee5d1eb\" class=\"prov-section\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: left;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">2/ Nguyễn Tiến - Kế toán của Công ty xuất nhập khẩu Máy Thành phố Hồ Chí Minh tham mưu cho Công ty ký giảm giá bán hàng cho người mua 213 triệu đồng để nhận lại từ người mua 163 triệu đồng.</span></p>\n ",
+    "dom_order": 10,
+    "anchors": []
+  },
+  {
+    "text": "3/ Cửa hàng Ngọc Khánh (thuộc Tổng công ty ) bán hàng không phản ánh vào sổ kế toán, không nhập quỹ và cho tư nhân vay và bị lừa đảo 86,7 triệu đồng. Đến nay chưa thu hồi được.",
+    "tag": "p",
+    "classes": [
+      "prov-section"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"7568c8e0-2d49-11f1-8fab-a5735ee5d1eb\" class=\"prov-section\" style=\"font-family: 'Times New Roman', Times, serif; font-size: 14px; text-align: left;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">3/ Cửa hàng Ngọc Khánh (thuộc Tổng công ty ) bán hàng không phản ánh vào sổ kế toán, không nhập quỹ và cho tư nhân vay và bị lừa đảo 86,7 triệu đồng. Đến nay chưa thu hồi được.</span></p>\n ",
+    "dom_order": 11,
+    "anchors": []
+  },
+  {
+    "text": "Giảm giá hàng không có căn cứ, bán thu chênh lệch giá 22 triệu đồng, tự sử dụng số tiền này.",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Giảm giá hàng không có căn cứ, bán thu chênh lệch giá 22 triệu đồng, tự sử dụng số tiền này.</span></p>\n ",
+    "dom_order": 12,
+    "anchors": []
+  },
+  {
+    "text": "Lập hợp đồng giả vay 200 triệu đồng, hạch toán lãi vay phải trả vào phí lưu thông 29 triệu đồng và đã chia cho cán bộ công nhân viên 25 triệu đồng.",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Lập hợp đồng giả vay 200 triệu đồng, hạch toán lãi vay phải trả vào phí lưu thông 29 triệu đồng và đã chia cho cán bộ công nhân viên 25 triệu đồng.</span></p>\n ",
+    "dom_order": 13,
+    "anchors": []
+  },
+  {
+    "text": "4/ Công ty xuất nhập khẩu máy Thành phố Hồ Chí Minh nhập khẩu hàng của hãng KOLON, nhưng khi trả lại hàng cho hãng này (tại Việt nam) không tính thuế nhập khẩu để đòi 133 ngàn USD.",
+    "tag": "p",
+    "classes": [
+      "prov-section"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"7568c8e0-2d49-11f1-8fab-a5735ee5d1eb\" class=\"prov-section\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: left;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">4/ Công ty xuất nhập khẩu máy Thành phố Hồ Chí Minh nhập khẩu hàng của hãng KOLON, nhưng khi trả lại hàng cho hãng này (tại Việt nam) không tính thuế nhập khẩu để đòi 133 ngàn USD.</span></p>\n ",
+    "dom_order": 14,
+    "anchors": []
+  },
+  {
+    "text": "II/ MỘT SỐ TỒN TẠI KHUYẾT ĐIỂM TRONG QUẢN LÝ KINH TẾ TÀI CHÍNH CẦN ĐƯỢC CHẤN CHỈNH.",
+    "tag": "p",
+    "classes": [
+      "prov-part"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<p id=\"756b60f0-2d49-11f1-9933-d516cf708ade\" class=\"prov-part\" align=\"center\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: center;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">II/ MỘT SỐ TỒN TẠI KHUYẾT ĐIỂM TRONG QUẢN LÝ KINH TẾ TÀI CHÍNH CẦN ĐƯỢC CHẤN CHỈNH.</span></p>\n ",
+    "dom_order": 15,
+    "anchors": []
+  },
+  {
+    "text": "1/ Cần khắc phục những thiếu sót trong việc thực hiện các chế độ của Nhà nước về công tác hạch toán kế toán, công tác quyết toán về bán hàng nhập khẩu theo Nghị định thư và hoạt động tự doanh.",
+    "tag": "p",
+    "classes": [
+      "prov-section"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"756bfd30-2d49-11f1-966e-4bf95b56deb9\" class=\"prov-section\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: left;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">1/ Cần khắc phục những thiếu sót trong việc thực hiện các chế độ của Nhà nước về công tác hạch toán kế toán, công tác quyết toán về bán hàng nhập khẩu theo Nghị định thư và hoạt động tự doanh.</span></p>\n ",
+    "dom_order": 16,
+    "anchors": []
+  },
+  {
+    "text": "2/ Tổ chức lại để quản lý chặt chẽ các hoạt động thu, chi đúng theo quy định chung của Nhà nước.",
+    "tag": "p",
+    "classes": [
+      "prov-section"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"5af846b0-300b-11f1-8c15-77762586a3fc\" class=\"prov-section\" style=\"font-family: 'Times New Roman', Times, serif; font-size: 14px; text-align: left;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">2/ Tổ chức lại để quản lý chặt chẽ các hoạt động thu, chi đúng theo quy định chung của Nhà nước.</span></p>\n ",
+    "dom_order": 17,
+    "anchors": []
+  },
+  {
+    "text": "3/ Có biện pháp theo dõi, đôn đốc thanh toán công nợ tại các đơn vị, nhất là công nợ tại Công ty xuất nhập khẩu Máy Thành phố Hồ Chí Minh.",
+    "tag": "p",
+    "classes": [
+      "prov-section"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"5af8bbe0-300b-11f1-be1c-9f9dceee2775\" class=\"prov-section\" style=\"font-family: 'Times New Roman', Times, serif; font-size: 14px; text-align: left;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">3/ Có biện pháp theo dõi, đôn đốc thanh toán công nợ tại các đơn vị, nhất là công nợ tại Công ty xuất nhập khẩu Máy Thành phố Hồ Chí Minh.</span></p>\n ",
+    "dom_order": 18,
+    "anchors": []
+  },
+  {
+    "text": "Trong những khuyết nhược điểm nêu trên, các đơn vị trực thuộc Tổng công ty có trách nhiệm và có phần trách nhiệm của Ban lãnh đạo Tổng công ty trong công tác quản lý chỉ đạo, kiểm tra các hoạt động tài chính trong toàn Tổng công ty.",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Trong những khuyết nhược điểm nêu trên, các đơn vị trực thuộc Tổng công ty có trách nhiệm và có phần trách nhiệm của Ban lãnh đạo Tổng công ty trong công tác quản lý chỉ đạo, kiểm tra các hoạt động tài chính trong toàn Tổng công ty.</span></p>\n ",
+    "dom_order": 19,
+    "anchors": []
+  },
+  {
+    "text": "Bộ Thương mại xem xét và có hình thức xử lý nghiêm minh theo Pháp luật đối với các vi phạm và có biện pháp chấn chỉnh công tác quản lý kinh tế tài chính của Tổng công ty.",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Bộ Thương mại xem xét và có hình thức xử lý nghiêm minh theo Pháp luật đối với các vi phạm và có biện pháp chấn chỉnh công tác quản lý kinh tế tài chính của Tổng công ty.</span></p>\n ",
+    "dom_order": 20,
+    "anchors": []
+  },
+  {
+    "text": "BỘ TRƯỞNG BỘ THƯƠNG MẠI\n \n BỘ TRƯỞNG BỘ TÀI CHÍNH\n \n \n \n Lê Văn Triết\n \n Hồ Tế",
+    "tag": "table",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": true,
+    "html_raw": "<table border=\"0\" style=\"width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 20px; border: none;\">\n <tbody>\n <tr>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">BỘ TRƯỞNG BỘ THƯƠNG MẠI</span></p></td>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">BỘ TRƯỞNG BỘ TÀI CHÍNH</span></p></td>\n </tr>\n <tr>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Lê Văn Triết</span></p></td>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Hồ Tế</span></p></td>\n </tr>\n </tbody>\n </table>\n ",
+    "dom_order": 21,
+    "anchors": []
+  },
+  {
+    "text": "Nơi nhận: - Như trên",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Nơi nhận: - Như trên</span></p>\n ",
+    "dom_order": 22,
+    "anchors": []
+  },
+  {
+    "text": "- Đc Tổng Bí thư Đỗ Mười",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">- Đc Tổng Bí thư Đỗ Mười</span></p>\n ",
+    "dom_order": 23,
+    "anchors": []
+  },
+  {
+    "text": "Đc Phó TT Phan Văn Khải",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Đc Phó TT Phan Văn Khải</span></p>\n ",
+    "dom_order": 24,
+    "anchors": []
+  },
+  {
+    "text": "Ban kinh tế TW",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Ban kinh tế TW</span></p>\n ",
+    "dom_order": 25,
+    "anchors": []
+  },
+  {
+    "text": "A. Sáu Phan",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<p id=\"756daae0-2d49-11f1-8588-9f8c2e99bd02\" class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: center;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">A. Sáu Phan</span></p>\n ",
+    "dom_order": 26,
+    "anchors": []
+  },
+  {
+    "text": "- Các Bộ TC, TM. T.tra NN",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">- Các Bộ TC, TM. T.tra NN</span></p>\n ",
+    "dom_order": 27,
+    "anchors": []
+  },
+  {
+    "text": "- Lưu VT",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">- Lưu VT</span></p>\n ",
+    "dom_order": 28,
+    "anchors": []
+  },
+  {
+    "text": "Văn bản liên quan:",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": true,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: left;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong><em>Văn bản liên quan:</em></strong></span></p>\n ",
+    "dom_order": 29,
+    "anchors": []
+  }
+]

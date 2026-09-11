@@ -1,0 +1,297 @@
+[
+  {
+    "text": "CHỦ TỊCH HỘI ĐỒNG BỘ\n TRƯỞNG",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<div>\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">CHỦ TỊCH HỘI ĐỒNG BỘ</span>\n <br><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">TRƯỞNG</span>\n </div>\n ",
+    "dom_order": 0,
+    "anchors": []
+  },
+  {
+    "text": "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<div>\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</span>\n </div>\n ",
+    "dom_order": 1,
+    "anchors": []
+  },
+  {
+    "text": "Độc lập - Tự do - Hạnh phúc",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<div>\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Độc lập - Tự do - Hạnh phúc</span>\n </div>\n ",
+    "dom_order": 2,
+    "anchors": []
+  },
+  {
+    "text": "Số: 158-CT",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<div style=\"display: table-cell; width: 50%; text-align: center; vertical-align: top;\">\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Số: 158-CT</span>\n </div>\n ",
+    "dom_order": 3,
+    "anchors": []
+  },
+  {
+    "text": "Hà Nội, ngày 18 tháng 5 năm 1991",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<div style=\"display: table-cell; width: 50%; vertical-align: top; font-style: italic; text-align: right;\">\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Hà Nội, ngày 18 tháng 5 năm 1991</span>\n </div>\n ",
+    "dom_order": 4,
+    "anchors": []
+  },
+  {
+    "text": "QUYẾT ĐỊNH",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p align=\"CENTER\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><b>QUYẾT ĐỊNH</b></span></p>\n ",
+    "dom_order": 5,
+    "anchors": []
+  },
+  {
+    "text": "VỀ VIỆC THU CÁC PHÍ \"CẤP VÀ BẢO VỆ TẦN SỐ VÔ TUYẾN ĐIỆN\"",
+    "tag": "p",
+    "classes": [
+      "MsoNormal"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"MsoNormal\" align=\"center\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">VỀ VIỆC THU CÁC PHÍ \"CẤP VÀ BẢO VỆ TẦN SỐ VÔ TUYẾN ĐIỆN\" </span></p>\n ",
+    "dom_order": 6,
+    "anchors": []
+  },
+  {
+    "text": "CHỦ TỊCH HỘI ĐỒNG BỘ TRƯỞNG",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p align=\"CENTER\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><b>CHỦ TỊCH HỘI ĐỒNG BỘ TRƯỞNG</b></span></p>\n ",
+    "dom_order": 7,
+    "anchors": []
+  },
+  {
+    "text": "Căn cứ Luật Tổ chức Hội đồng Bộ trưởng ngày 4 tháng 7 năm 1981;",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": true,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p align=\"JUSTIFY\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><i>Căn cứ Luật Tổ chức Hội đồng Bộ trưởng ngày 4 tháng 7 năm 1981;</i></span></p>\n ",
+    "dom_order": 8,
+    "anchors": []
+  },
+  {
+    "text": "Xét đề nghị của Bộ trưởng Bộ Giao thông vận tải và Bưu điện và Bộ trưởng Bộ Tài chính,",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": true,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p align=\"JUSTIFY\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><i>Xét đề nghị của Bộ trưởng Bộ Giao thông vận tải và Bưu điện và Bộ trưởng Bộ Tài chính, </i></span></p>\n ",
+    "dom_order": 9,
+    "anchors": []
+  },
+  {
+    "text": "QUYẾT ĐỊNH:",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p align=\"CENTER\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><b>QUYẾT ĐỊNH:</b></span></p>\n ",
+    "dom_order": 10,
+    "anchors": []
+  },
+  {
+    "text": "Điều 1.",
+    "tag": "p",
+    "classes": [
+      "prov-article"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"edd370c0-23a1-11f1-84a6-8d05f342b31f\" class=\"prov-article\" style=\"font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>Điều 1.</strong></span></p>\n ",
+    "dom_order": 11,
+    "anchors": []
+  },
+  {
+    "text": "a/ Cho phép Bộ Giao thông vận tải và Bưu điện thu các phí \"Cấp và bảo vệ tần số vô tuyến điện\".",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"9cc99450-ead7-11f0-a3d8-79a82f2d49d0\" class=\"prov-item\" style=\"font-family: 'Times New Roman' , Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">a/ Cho phép Bộ Giao thông vận tải và Bưu điện thu các phí \"Cấp và bảo vệ tần số vô tuyến điện\".</span></p>\n ",
+    "dom_order": 12,
+    "anchors": []
+  },
+  {
+    "text": "b/ Mọi tổ chức, cơ quan, cá nhân trong nước và nước ngoài đóng tại Việt Nam có sử dụng máy phát và tần số vô tuyến điện thuộc các nghiệp vụ thông tin liên lạc, phát thanh, truyền hình và các nghiệp vụ khác đều phải nộp các phí \"Cấp và bảo vệ tần số vô tuyến điện\". Đối với Bộ Quốc phòng, Bộ Ngoại giao và Bộ Nội vụ cần thống nhất trường hợp thu, trường hợp nào được miễn.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"ee1fe310-23a1-11f1-981e-671854d4f0fc\" class=\"prov-item\" style=\"font-family: 'Times New Roman' , Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">b/ Mọi tổ chức, cơ quan, cá nhân trong nước và nước ngoài đóng tại Việt Nam có sử dụng máy phát và tần số vô tuyến điện thuộc các nghiệp vụ thông tin liên lạc, phát thanh, truyền hình và các nghiệp vụ khác đều phải nộp các phí \"Cấp và bảo vệ tần số vô tuyến điện\". Đối với Bộ Quốc phòng, Bộ Ngoại giao và Bộ Nội vụ cần thống nhất trường hợp thu, trường hợp nào được miễn.</span></p>\n ",
+    "dom_order": 13,
+    "anchors": []
+  },
+  {
+    "text": "c/ Tổ chức, cơ quan, cá nhân nào sử dụng máy phát và tần số vô tuyến điện không đăng ký và không nộp phí theo quy định sẽ bị xử phạt theo pháp luật.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"ee1fe31a-23a1-11f1-ae41-093e28aad26d\" class=\"prov-item\" style=\"font-family: 'Times New Roman', Times, serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">c/ Tổ chức, cơ quan, cá nhân nào sử dụng máy phát và tần số vô tuyến điện không đăng ký và không nộp phí theo quy định sẽ bị xử phạt theo pháp luật.</span></p>\n ",
+    "dom_order": 14,
+    "anchors": []
+  },
+  {
+    "text": "Điều 2. Bộ Giao thông vận tải và Bưu điện thống nhất với Bộ Tài chính quy định cụ thể đối tượng thu, các khoản thu, mức thu, mức phạt tiền vi phạm hành chính, trên nguyên tắc mức thu thấp hơn một ít so với mức thu hiện hành của các nước ở khu vực Đông Nam Á.",
+    "tag": "p",
+    "classes": [
+      "prov-article"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"9cca0980-ead7-11f0-ad81-0d442af5261f\" class=\"prov-article\" style=\"font-family: 'Times New Roman' , Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>Điều 2. </strong>Bộ Giao thông vận tải và Bưu điện thống nhất với Bộ Tài chính quy định cụ thể đối tượng thu, các khoản thu, mức thu, mức phạt tiền vi phạm hành chính, trên nguyên tắc mức thu thấp hơn một ít so với mức thu hiện hành của các nước ở khu vực Đông Nam Á.</span></p>\n ",
+    "dom_order": 15,
+    "anchors": []
+  },
+  {
+    "text": "Khoản thu phí \"Cấp và bảo vệ tần số vô tuyến điện\" là khoản thu thuộc ngân sách Nhà nước. Bộ Giao thông vận tải và Bưu điện chịu trách nhiệm tổ chức thu.",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', Times, serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Khoản thu phí \"Cấp và bảo vệ tần số vô tuyến điện\" là khoản thu thuộc ngân sách Nhà nước. Bộ Giao thông vận tải và Bưu điện chịu trách nhiệm tổ chức thu.</span></p>\n ",
+    "dom_order": 16,
+    "anchors": []
+  },
+  {
+    "text": "Các khoản thu kể trên được nộp vào ngân sách Nhà nước sau khi trừ các chi phí \"cho công tác nghiên cứu, ấn định bảo vệ và kiểm soát tần số vô tuyến điện\" được Bộ Tài chính và Bộ Giao thông vận tải và Bưu điện xét duyệt.",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', Times, serif; font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Các khoản thu kể trên được nộp vào ngân sách Nhà nước sau khi trừ các chi phí \"cho công tác nghiên cứu, ấn định bảo vệ và kiểm soát tần số vô tuyến điện\" được Bộ Tài chính và Bộ Giao thông vận tải và Bưu điện xét duyệt.</span></p>\n ",
+    "dom_order": 17,
+    "anchors": []
+  },
+  {
+    "text": "Điều 3. Bộ trưởng các Bộ Giao thông vận tải và Bưu điện, Tài chính, Nội vụ, Quốc phòng, Chủ nhiệm các Uỷ ban Nhà nước, Thủ trưởng các cơ quan khác thuộc Hội đồng Bộ trưởng và Chủ tịch Uỷ ban Nhân dân các tỉnh, thành phố, đặc khu trực thuộc Trung ương chịu trách nhiệm thi hành Quyết định này.",
+    "tag": "p",
+    "classes": [
+      "prov-article"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"9cca7eb0-ead7-11f0-b842-f1b0942f69fd\" class=\"prov-article\" style=\"font-family: 'Times New Roman' , Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>Điều 3. </strong>Bộ trưởng các Bộ Giao thông vận tải và Bưu điện, Tài chính, Nội vụ, Quốc phòng, Chủ nhiệm các Uỷ ban Nhà nước, Thủ trưởng các cơ quan khác thuộc Hội đồng Bộ trưởng và Chủ tịch Uỷ ban Nhân dân các tỉnh, thành phố, đặc khu trực thuộc Trung ương chịu trách nhiệm thi hành Quyết định này.</span></p>\n ",
+    "dom_order": 18,
+    "anchors": []
+  },
+  {
+    "text": "Quyết định này có hiệu lực kể từ ngày ban hành.",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-size: 14px;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Quyết định này có hiệu lực kể từ ngày ban hành.</span></p>\n ",
+    "dom_order": 19,
+    "anchors": []
+  },
+  {
+    "text": "Đồng Sĩ Nguyên\n (Đã ký)",
+    "tag": "table",
+    "classes": [
+      "MsoNormalTable"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": true,
+    "html_raw": "<table class=\"MsoNormalTable\" border=\"0\" cellspacing=\"0\" style=\"width: 102.698%;\">\n <tbody>\n <tr>\n <td width=\"386\" valign=\"top\" style=\"width: 69.4232%;\">\n <p class=\"MsoNormal\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"> </span></p></td>\n <td width=\"387\" valign=\"top\" style=\"width: 30.5768%;\">\n <p class=\"MsoNormal\" align=\"center\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><b>Đồng Sĩ Nguyên</b></span></p>\n <p class=\"MsoNormal\" align=\"center\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">(Đã ký)</span></p></td>\n </tr>\n </tbody>\n </table>\n ",
+    "dom_order": 20,
+    "anchors": []
+  }
+]

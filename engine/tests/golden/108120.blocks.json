@@ -1,0 +1,520 @@
+[
+  {
+    "text": "BỘ TÀI CHÍNH\n Số : 65 - LB/TT\n \n CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM\n Độc Lập - Tự do - Hạnh phúc\n ------------------------------\n \n \n \n \n Hà Nội, ngày 28 tháng 11 năm 1987",
+    "tag": "table",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": true,
+    "is_center": false,
+    "is_table": true,
+    "html_raw": "<table border=\"0\" style=\"width: 106.507%; border-collapse: collapse; table-layout: fixed; margin-top: 20px; border: none; height: 197px;\">\n <tbody>\n <tr style=\"height: 135px;\">\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif; width: 50%;\">\n <p><strong>BỘ TÀI CHÍNH</strong></p>\n <p>Số : 65 - LB/TT</p></td>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif; width: 50%;\">\n <p><strong>CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong></p>\n <p>Độc Lập - Tự do - Hạnh phúc</p>\n <p>------------------------------</p></td>\n </tr>\n <tr style=\"height: 62px;\">\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif; width: 50%;\"></td>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif; width: 50%;\">\n <p><em>Hà Nội, ngày 28 tháng 11 năm 1987</em></p></td>\n </tr>\n </tbody>\n </table>\n ",
+    "dom_order": 0,
+    "anchors": []
+  },
+  {
+    "text": "THÔNG TƯ LIÊN BỘ",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<p align=\"center\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: center;\"><strong>THÔNG TƯ LIÊN BỘ</strong></p>\n ",
+    "dom_order": 1,
+    "anchors": []
+  },
+  {
+    "text": "QUY ĐỊNH CHẾ ĐỘ, TIÊU CHUẨN TRANG PHỤC NGÀNH HẢI QUAN",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: center;\">QUY ĐỊNH CHẾ ĐỘ, TIÊU CHUẨN TRANG PHỤC NGÀNH HẢI QUAN</p>\n ",
+    "dom_order": 2,
+    "anchors": []
+  },
+  {
+    "text": "Căn cứ vào Nghị định số 139/HĐBT ngày 20/10/1984 của Hội đồng Bộ trưởng quy định về nhiệm vụ, quyền hạn và tổ chức của Tổng cục Hải quan; Trên cơ sở chế độ trang phục của ngành Hải quan đã quy định tại Thông tư số 147/NgT-TCCB ngày 19/7/1978 của Bộ Ngoại thương; đồng thời thực hiện Quyết định số 140/HĐBT ngày 15/9/1987 của Hội đồng Bộ trưởng về triệt để tiết kiệm; Liên Bộ Tài chính - Tổng cục Hải quan quy định chế độ, tiêu chuẩn trang phục Hải quan như sau:",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">Căn cứ vào Nghị định số 139/HĐBT ngày 20/10/1984 của Hội đồng Bộ trưởng quy định về nhiệm vụ, quyền hạn và tổ chức của Tổng cục Hải quan; Trên cơ sở chế độ trang phục của ngành Hải quan đã quy định tại Thông tư số 147/NgT-TCCB ngày 19/7/1978 của Bộ Ngoại thương; đồng thời thực hiện Quyết định số 140/HĐBT ngày 15/9/1987 của Hội đồng Bộ trưởng về triệt để tiết kiệm; Liên Bộ Tài chính - Tổng cục Hải quan quy định chế độ, tiêu chuẩn trang phục Hải quan như sau:</p>\n ",
+    "dom_order": 3,
+    "anchors": []
+  },
+  {
+    "text": "I- ĐỐI TƯỢNG:",
+    "tag": "p",
+    "classes": [
+      "prov-part"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<p id=\"0d3f13e0-2d4f-11f1-b24a-f1022fc551fa\" class=\"prov-part\" align=\"center\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: center;\">I- <span style=\"text-decoration: underline;\">ĐỐI TƯỢNG:</span></p>\n ",
+    "dom_order": 4,
+    "anchors": []
+  },
+  {
+    "text": "Đối tượng được cấp phát trang phục Hải quan là tất cả cán bộ, nhân viên trong biên chế chính thức của ngành Hải quan (trừ nhân viên hợp đồng, tạm tuyển, lao động, cấp dưỡng, nhà trẻ v. .v. . ).",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">Đối tượng được cấp phát trang phục Hải quan là tất cả cán bộ, nhân viên trong biên chế chính thức của ngành Hải quan (trừ nhân viên hợp đồng, tạm tuyển, lao động, cấp dưỡng, nhà trẻ v. .v. . ).</p>\n ",
+    "dom_order": 5,
+    "anchors": []
+  },
+  {
+    "text": "II- TIÊU CHUẨN, CHẾ ĐỘ TRANG PHỤC HẢI QUAN:",
+    "tag": "p",
+    "classes": [
+      "prov-part"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<p id=\"0d3f13e0-2d4f-11f1-b24a-f1022fc551fa\" class=\"prov-part\" align=\"center\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: center;\">II- <span style=\"text-decoration: underline;\">TIÊU CHUẨN, CHẾ ĐỘ TRANG PHỤC HẢI QUAN:</span></p>\n ",
+    "dom_order": 6,
+    "anchors": []
+  },
+  {
+    "text": "1/ Chế độ cấp phát gồm các loại sau:",
+    "tag": "p",
+    "classes": [
+      "prov-section"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d3f6200-2d4f-11f1-91b1-ab27fc42feca\" class=\"prov-section\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: left;\">1/ Chế độ cấp phát gồm các loại sau:</p>\n ",
+    "dom_order": 7,
+    "anchors": []
+  },
+  {
+    "text": "a. Bộ quần áo thu đông. Thời hạn sử dụng 1 năm 1 bộ.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d3f8910-2d4f-11f1-81e8-fb6c67b1c29c\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">a. Bộ quần áo thu đông. Thời hạn sử dụng 1 năm 1 bộ.</p>\n ",
+    "dom_order": 8,
+    "anchors": []
+  },
+  {
+    "text": "b. Ca-ra-vát: Thời hạn sử dụng 3 năm 1 cái.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d3fb020-2d4f-11f1-ae1e-0da3c8da0af5\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">b. Ca-ra-vát: Thời hạn sử dụng 3 năm 1 cái.</p>\n ",
+    "dom_order": 9,
+    "anchors": []
+  },
+  {
+    "text": "c. Thắt lưng da: Thời hạn sử dụng 3 năm 1 chiếc.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d3fd730-2d4f-11f1-bd78-d7c74aa55fab\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">c. Thắt lưng da: Thời hạn sử dụng 3 năm 1 chiếc.</p>\n ",
+    "dom_order": 10,
+    "anchors": []
+  },
+  {
+    "text": "d. Áo ấm: Thời hạn sử dụng 4 năm 1 chiếc.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d3ffe40-2d4f-11f1-b242-878beed66e04\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">d. Áo ấm: Thời hạn sử dụng 4 năm 1 chiếc.</p>\n ",
+    "dom_order": 11,
+    "anchors": []
+  },
+  {
+    "text": "e. Áo bông dài, mũ bông bịt tai kiểu biên phòng: cấp cho cán bộ, nhân viên công tác ở biên giới, hải đảo. Thời hạn sử dụng 4 năm 1 chiếc.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d404c60-2d4f-11f1-836c-cd90bae53fd0\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">e. Áo bông dài, mũ bông bịt tai kiểu biên phòng: cấp cho cán bộ, nhân viên công tác ở biên giới, hải đảo. Thời hạn sử dụng 4 năm 1 chiếc.</p>\n ",
+    "dom_order": 12,
+    "anchors": []
+  },
+  {
+    "text": "g. Mũ lưỡi trai: Thời hạn sử dụng 5 năm 1 chiếc.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d407370-2d4f-11f1-9ccb-0b296866819d\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">g. Mũ lưỡi trai: Thời hạn sử dụng 5 năm 1 chiếc.</p>\n ",
+    "dom_order": 13,
+    "anchors": []
+  },
+  {
+    "text": "h. Mũ cứng: Thời hạn sử dụng 2 năm 1 chiếc.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d409a80-2d4f-11f1-ab13-df586e9ff7c6\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">h. Mũ cứng: Thời hạn sử dụng 2 năm 1 chiếc.</p>\n ",
+    "dom_order": 14,
+    "anchors": []
+  },
+  {
+    "text": "i. Giầy da đen ngắn cổ: Thời hạn sử dụng 2 năm 1 đôi (hoặc thay bằng dép nhựa thời hạn sử dụng 1 năm 1 đôi).",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d40c190-2d4f-11f1-9dcc-99f6ffa07be1\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">i. Giầy da đen ngắn cổ: Thời hạn sử dụng 2 năm 1 đôi (hoặc thay bằng dép nhựa thời hạn sử dụng 1 năm 1 đôi).</p>\n ",
+    "dom_order": 15,
+    "anchors": []
+  },
+  {
+    "text": "k. Tất chân (nylon): Thời hạn sử dụng 1 năm 1 đôi.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d40c19a-2d4f-11f1-a8db-235ae21072e1\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">k. Tất chân (nylon): Thời hạn sử dụng 1 năm 1 đôi.</p>\n ",
+    "dom_order": 16,
+    "anchors": []
+  },
+  {
+    "text": "l. Áo đi mưa nylon: Thời hạn sử dụng 2 năm 1 cái đối với cán bộ, nhân viên làm công tác gián tiếp; 1 năm 1 cái đối với cán bộ, nhân viên làm công tác trực tiếp.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d40e8a0-2d4f-11f1-9e56-ab5f6ace24d7\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">l. Áo đi mưa nylon: Thời hạn sử dụng 2 năm 1 cái đối với cán bộ, nhân viên làm công tác gián tiếp; 1 năm 1 cái đối với cán bộ, nhân viên làm công tác trực tiếp.</p>\n ",
+    "dom_order": 17,
+    "anchors": []
+  },
+  {
+    "text": "Cán bộ, nhân viên làm việc ở biên giới, hải đảo phát áo mưa vải bạt thay áo mưa nylon. Thời hạn sử dụng 3 năm 1 cái.",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">Cán bộ, nhân viên làm việc ở biên giới, hải đảo phát áo mưa vải bạt thay áo mưa nylon. Thời hạn sử dụng 3 năm 1 cái.</p>\n ",
+    "dom_order": 18,
+    "anchors": []
+  },
+  {
+    "text": "m. Ủng cao cổ: cấp phát cho cán bộ, nhân viên công tác ở biên giới, hải đảo. Thời hạn sử dụng 4 năm 1 đôi.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d410fb0-2d4f-11f1-b14c-f94d3c250a73\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">m. Ủng cao cổ: cấp phát cho cán bộ, nhân viên công tác ở biên giới, hải đảo. Thời hạn sử dụng 4 năm 1 đôi.</p>\n ",
+    "dom_order": 19,
+    "anchors": []
+  },
+  {
+    "text": "n. Phù hiệu hải quan trên mũ, khi hỏng thì đổi.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d4136c0-2d4f-11f1-b5b7-cf2f0066986f\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">n. Phù hiệu hải quan trên mũ, khi hỏng thì đổi.</p>\n ",
+    "dom_order": 20,
+    "anchors": []
+  },
+  {
+    "text": "c. Một bộ cấp hiệu trên ve áo và cầu vai, khi hỏng thì đổi.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d415dd0-2d4f-11f1-9028-656a6c14e719\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">c. Một bộ cấp hiệu trên ve áo và cầu vai, khi hỏng thì đổi.</p>\n ",
+    "dom_order": 21,
+    "anchors": []
+  },
+  {
+    "text": "2/ Chế độ nhượng (bán):",
+    "tag": "p",
+    "classes": [
+      "prov-section"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d4184e0-2d4f-11f1-8230-05139fd74ba5\" class=\"prov-section\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: left;\">2/ Chế độ nhượng (bán):</p>\n ",
+    "dom_order": 22,
+    "anchors": []
+  },
+  {
+    "text": "Ngoài chế độ cấp phát, cán bộ nhân viên Hải quan thuộc đối tượng cấp phát được nhượng một số trang phục theo giá cả Nhà nước quy định (như đối với ngành Công an), bao gồm:",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">Ngoài chế độ cấp phát, cán bộ nhân viên Hải quan thuộc đối tượng cấp phát được nhượng một số trang phục theo giá cả Nhà nước quy định (như đối với ngành Công an), bao gồm:</p>\n ",
+    "dom_order": 23,
+    "anchors": []
+  },
+  {
+    "text": "a. Bộ quần áo xuân hè: Thời gian sử dụng 1 năm 1 bộ",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d41abf0-2d4f-11f1-b8a8-a3f8b4375d34\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">a. Bộ quần áo xuân hè: Thời gian sử dụng 1 năm 1 bộ</p>\n ",
+    "dom_order": 24,
+    "anchors": []
+  },
+  {
+    "text": "b. Màn cá nhân: 1 chiếc sử dụng trong 4 năm",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d41d300-2d4f-11f1-8a30-87b4cf598681\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">b. Màn cá nhân: 1 chiếc sử dụng trong 4 năm</p>\n ",
+    "dom_order": 25,
+    "anchors": []
+  },
+  {
+    "text": "c. Chăn bông (vỏ bằng vải kaki 8m, ruột bông 2 kg): Thời hạn sử dụng 4 năm 1 chiếc. Từ Quảng nam Đà nẵng trở vào thay bằng chăn sợi tổng hợp, sử dụng trong 4 năm.",
+    "tag": "p",
+    "classes": [
+      "prov-item"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"0d41fa10-2d4f-11f1-90ef-ed590eed852e\" class=\"prov-item\" style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">c. Chăn bông (vỏ bằng vải kaki 8m, ruột bông 2 kg): Thời hạn sử dụng 4 năm 1 chiếc. Từ Quảng nam Đà nẵng trở vào thay bằng chăn sợi tổng hợp, sử dụng trong 4 năm.</p>\n ",
+    "dom_order": 26,
+    "anchors": []
+  },
+  {
+    "text": "II- CÁC QUY ĐỊNH KHÁC",
+    "tag": "p",
+    "classes": [
+      "prov-part"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<p id=\"0d422120-2d4f-11f1-97ba-3b9dc7495733\" class=\"prov-part\" align=\"center\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: center;\">II- <span style=\"text-decoration: underline;\">CÁC QUY ĐỊNH KHÁC</span></p>\n ",
+    "dom_order": 27,
+    "anchors": []
+  },
+  {
+    "text": "Ngoài các quy định trên, Tổng cục Hải quan căn cứ vào chế độ bảo hộ lao động do Bộ Lao động ban hành để áp dụng cho các đối tượng khác cần trang bị bảo hộ lao động.",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">Ngoài các quy định trên, Tổng cục Hải quan căn cứ vào chế độ bảo hộ lao động do Bộ Lao động ban hành để áp dụng cho các đối tượng khác cần trang bị bảo hộ lao động.</p>\n ",
+    "dom_order": 28,
+    "anchors": []
+  },
+  {
+    "text": "IV- ĐIỀU KHOẢN THI HÀNH:",
+    "tag": "p",
+    "classes": [
+      "prov-part"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<p id=\"0a1350f0-3024-11f1-9cbe-41215002b6af\" class=\"prov-part\" align=\"center\" style=\"font-family: 'Times New Roman', serif; font-size: 14px; text-align: center;\">IV- <span style=\"text-decoration: underline;\">ĐIỀU KHOẢN THI HÀNH:</span></p>\n ",
+    "dom_order": 29,
+    "anchors": []
+  },
+  {
+    "text": "- Hàng năm Tổng cục Hải quan că cứ vào biên chế được duyệt và tiêu chuẩn quy định trên, lập dự trù kế hoạch hiện vật và giá trị báo cáo Uỷ ban kế hoạch Nhà nước và Bộ Tài chính xét duyệt.",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">- Hàng năm Tổng cục Hải quan că cứ vào biên chế được duyệt và tiêu chuẩn quy định trên, lập dự trù kế hoạch hiện vật và giá trị báo cáo Uỷ ban kế hoạch Nhà nước và Bộ Tài chính xét duyệt.</p>\n ",
+    "dom_order": 30,
+    "anchors": []
+  },
+  {
+    "text": "- Đối với trang phục được nhượng theo tiêu chuẩn hàng năm, Tổng cục Hải quan có trách nhiệm thu hồi tiền nộp Ngân sách Nhà nước theo đúng chế độ quy định.",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">- Đối với trang phục được nhượng theo tiêu chuẩn hàng năm, Tổng cục Hải quan có trách nhiệm thu hồi tiền nộp Ngân sách Nhà nước theo đúng chế độ quy định.</p>\n ",
+    "dom_order": 31,
+    "anchors": []
+  },
+  {
+    "text": "- Những trang phục nghiệp vụ được cấp phát là tài sản của Nhà nước phải được quản lý chặt chẽ và thanh quyết toán với Bộ Tài chính theo đúng chế độ quy định.",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">- Những trang phục nghiệp vụ được cấp phát là tài sản của Nhà nước phải được quản lý chặt chẽ và thanh quyết toán với Bộ Tài chính theo đúng chế độ quy định.</p>\n ",
+    "dom_order": 32,
+    "anchors": []
+  },
+  {
+    "text": "- Tổng cục Hải quan căn cứ vào Thông tư này để hướng dẫn cụ thể việc thi hành.",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">- Tổng cục Hải quan căn cứ vào Thông tư này để hướng dẫn cụ thể việc thi hành.</p>\n ",
+    "dom_order": 33,
+    "anchors": []
+  },
+  {
+    "text": "- Thông tư này có hiệu thi hành kể từ ngày ký. Các quy định trước đây trái với Thông tư này đều bãi bỏ./.",
+    "tag": "p",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p style=\"font-family: 'Times New Roman', serif; font-size: 14px;\">- Thông tư này có hiệu thi hành kể từ ngày ký. Các quy định trước đây trái với Thông tư này đều bãi bỏ./.</p>\n ",
+    "dom_order": 34,
+    "anchors": []
+  },
+  {
+    "text": "TỔNG CỤC TRƯỞNG TC.HẢI QUAN\n \n KT/ BỘ TRƯỞNG BỘ TÀI CHÍNH\n \n \n \n PHÓ TỔNG CỤC TRƯỞNG\n \n THỨ TRƯỞNG\n \n \n \n Vũ Xuân Hồng\n \n Lý Tài Luận",
+    "tag": "table",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": true,
+    "html_raw": "<table border=\"0\" style=\"width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 20px; border: none;\">\n <tbody>\n <tr>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p><strong>TỔNG CỤC TRƯỞNG TC.HẢI QUAN</strong></p></td>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p><strong>KT/ BỘ TRƯỞNG BỘ TÀI CHÍNH</strong></p></td>\n </tr>\n <tr>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p><strong>PHÓ TỔNG CỤC TRƯỞNG</strong></p></td>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p><strong>THỨ TRƯỞNG</strong></p></td>\n </tr>\n <tr>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p>Vũ Xuân Hồng</p></td>\n <td style=\"vertical-align: top; text-align: center; border: none; padding: 5px; font-family: 'Times New Roman', serif;\">\n <p>Lý Tài Luận</p></td>\n </tr>\n </tbody>\n </table>\n ",
+    "dom_order": 35,
+    "anchors": []
+  }
+]

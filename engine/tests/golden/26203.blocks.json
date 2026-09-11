@@ -1,0 +1,494 @@
+[
+  {
+    "text": "BỘ GIÁO DỤC VÀ",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<div>\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">BỘ GIÁO DỤC VÀ </span>\n </div>\n ",
+    "dom_order": 0,
+    "anchors": []
+  },
+  {
+    "text": "ĐÀO TẠO",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<div>\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">ĐÀO TẠO</span>\n </div>",
+    "dom_order": 1,
+    "anchors": []
+  },
+  {
+    "text": "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<div>\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</span>\n </div>\n ",
+    "dom_order": 2,
+    "anchors": []
+  },
+  {
+    "text": "Độc lập - Tự do - Hạnh phúc",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<div>\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Độc lập - Tự do - Hạnh phúc</span>\n </div>",
+    "dom_order": 3,
+    "anchors": []
+  },
+  {
+    "text": "Số: 05/2011/TT-BGDĐT",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<div style=\"display: table-cell; width: 50%; text-align: center; vertical-align: top;\">\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Số: 05/2011/TT-BGDĐT</span>\n </div>",
+    "dom_order": 4,
+    "anchors": []
+  },
+  {
+    "text": "Hà Nội, Ngày 10 tháng 02 năm 2011",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": true,
+    "is_table": false,
+    "html_raw": "<div style=\"display: table-cell; width: 50%; text-align: center; vertical-align: top; font-style: italic;\">\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Hà Nội, Ngày 10 tháng 02 năm 2011</span>\n </div>\n ",
+    "dom_order": 5,
+    "anchors": []
+  },
+  {
+    "text": "THÔNG TƯ",
+    "tag": "p",
+    "classes": [
+      "MsoNormal"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"MsoNormal\" align=\"center\" style=\"margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><b>THÔNG TƯ</b></span></p>\n ",
+    "dom_order": 6,
+    "anchors": []
+  },
+  {
+    "text": "Về việc sửa đổi, bổ sung điểm d khoản 1 Điều 13; khoản 2 Điều 16; khoản 1 Điều 17 và điểm c khoản 2 Điều 18 của Điều lệ Trường mầm non ban hành kèm theo Quyết định số 14/2008/QĐ-BGDĐT ngày 07 tháng 4 năm 2008 của Bộ trưởng Bộ Giáo dục và Đào tạo và đã được sửa đổi, bổ sung tại Thông tư số 44/2010/TT-BGDĐT ngày 30 tháng 12 năm 2010 của Bộ trưởng Bộ Giáo dục và Đào tạo về việc sửa đổi, bổ sung Điều lệ Trường mầm non",
+    "tag": "p",
+    "classes": [
+      "MsoNormal"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"MsoNormal\" align=\"center\" style=\"margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><b>Về việc sửa đổi, bổ sung điểm d khoản 1 Điều 13; khoản 2 Điều 16; khoản 1 Điều 17 và điểm c khoản 2 Điều 18 của </b><b>Điều lệ Trường mầm non ban hành kèm theo Quyết định số <a target=\"_blank\" rel=\"noopener noreferrer\">14/2008/QĐ-BGDĐT</a> ngày 07 tháng 4 năm 2008</b><b> của Bộ trưởng Bộ Giáo dục và Đào tạo và đã được sửa đổi, bổ sung tại Thông tư số <a target=\"_blank\" rel=\"noopener noreferrer\">44/2010/TT-BGDĐT</a> </b><b>ngày 30 tháng 12 năm 2010 của Bộ trưởng Bộ Giáo dục và Đào tạo về việc sửa đổi, bổ sung Điều lệ Trường mầm non</b></span></p>\n ",
+    "dom_order": 7,
+    "anchors": []
+  },
+  {
+    "text": "___________________________________________________",
+    "tag": "p",
+    "classes": [
+      "MsoNormal"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"MsoNormal\" align=\"center\" style=\"margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><b> ___________________________________________________</b></span></p>\n ",
+    "dom_order": 8,
+    "anchors": []
+  },
+  {
+    "text": "Căn cứ Luật Giáo dục ngày 14 tháng 6 năm 2005; Luật sửa đổi, bổ sung một số điều của Luật Giáo dục ngày 25 tháng 11 năm 2009;",
+    "tag": "p",
+    "classes": [
+      "MsoNormal"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"MsoNormal\" align=\"justify\" style=\"margin-top: 6pt; margin-bottom: 6pt;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Căn cứ Luật Giáo dục ngày 14 tháng 6 năm 2005; Luật sửa đổi, bổ sung một số điều của Luật Giáo dục ngày 25 tháng 11 năm 2009;</span></p>\n ",
+    "dom_order": 9,
+    "anchors": []
+  },
+  {
+    "text": "Căn cứ Nghị định số 178/2007/NĐ-CP ngày 03 tháng 12 năm 2007 của Chính phủ quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của bộ, cơ quan ngang bộ;",
+    "tag": "p",
+    "classes": [
+      "MsoNormal"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"MsoNormal\" align=\"justify\" style=\"margin-top: 6pt; margin-bottom: 6pt;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Căn cứ Nghị định số <a target=\"_blank\" rel=\"noopener noreferrer\">178/2007/NĐ-CP</a> ngày 03 tháng 12 năm 2007 của Chính phủ quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của bộ, cơ quan ngang bộ;</span></p>\n ",
+    "dom_order": 10,
+    "anchors": []
+  },
+  {
+    "text": "Căn cứ Nghị định số 32/2008/NĐ-CP ngày 19 tháng 3 năm 2008 của Chính phủ quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Bộ Giáo dục và Đào tạo;",
+    "tag": "p",
+    "classes": [
+      "MsoNormal"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"MsoNormal\" align=\"justify\" style=\"margin-top: 6pt; margin-bottom: 6pt;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Căn cứ Nghị định số <a target=\"_blank\" rel=\"noopener noreferrer\">32/2008/NĐ-CP</a> ngày 19 tháng 3 năm 2008 của Chính phủ quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Bộ Giáo dục và Đào tạo;</span></p>\n ",
+    "dom_order": 11,
+    "anchors": []
+  },
+  {
+    "text": "Căn cứ Nghị định số 75/2006/NĐ-CP ngày 02 tháng 8 năm 2006 của Chính phủ quy định chi tiết và hướng dẫn thi hành một số điều của Luật Giáo dục;",
+    "tag": "p",
+    "classes": [
+      "MsoNormal"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"MsoNormal\" align=\"justify\" style=\"margin-top: 6pt; margin-bottom: 6pt;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Căn cứ Nghị định số <a target=\"_blank\" rel=\"noopener noreferrer\">75/2006/NĐ-CP</a> ngày 02 tháng 8 năm 2006 của Chính phủ quy định chi tiết và hướng dẫn thi hành một số điều của Luật Giáo dục;</span></p>\n ",
+    "dom_order": 12,
+    "anchors": []
+  },
+  {
+    "text": "Căn cứ Nghị định số 115/2010/NĐ-CP ngày 24 tháng 12 năm 2010 của Chính phủ quy định trách nhiệm quản lý nhà nước về giáo dục;",
+    "tag": "p",
+    "classes": [
+      "MsoNormal"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"MsoNormal\" align=\"justify\" style=\"margin-top: 6pt; margin-bottom: 6pt;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Căn cứ Nghị định số <a target=\"_blank\" rel=\"noopener noreferrer\">115/2010/NĐ-CP</a> ngày 24 tháng 12 năm 2010 của Chính phủ quy định trách nhiệm quản lý nhà nước về giáo dục;</span></p>\n ",
+    "dom_order": 13,
+    "anchors": []
+  },
+  {
+    "text": "Theo đề nghị của Vụ trưởng Vụ Giáo dục Mầm non,",
+    "tag": "p",
+    "classes": [
+      "MsoNormal"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"MsoNormal\" align=\"justify\" style=\"margin-top: 6pt; margin-bottom: 6pt;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Theo đề nghị của Vụ trưởng Vụ Giáo dục Mầm non,</span></p>\n ",
+    "dom_order": 14,
+    "anchors": []
+  },
+  {
+    "text": "Bộ trưởng Bộ Giáo dục và Đào tạo Quyết định:",
+    "tag": "p",
+    "classes": [
+      "MsoNormal"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"MsoNormal\" align=\"justify\" style=\"margin-top: 6pt; margin-bottom: 6pt;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Bộ trưởng Bộ Giáo dục và Đào tạo Quyết định:</span></p>\n ",
+    "dom_order": 15,
+    "anchors": []
+  },
+  {
+    "text": "Điều 1. Sửa đổi, bổ sung điểm d khoản 1 Điều 13; khoản 2 Điều 16; khoản 1 Điều 17 và điểm c khoản 2 Điều 18 của Điều lệ Trường mầm non ban hành kèm theo Quyết định số 14/2008/QĐ-BGDĐT ngày 07 tháng 4 năm 2008 của Bộ trưởng Bộ Giáo dục và Đào tạo và đã được sửa đổi, bổ sung tại Thông tư số 44/2010/TT-BGDĐT ngày 30 tháng 12 năm 2010 của Bộ trưởng Bộ Giáo dục và Đào tạo về việc sửa đổi, bổ sung Điều lệ trường mầm non, như sau:",
+    "tag": "p",
+    "classes": [
+      "prov-article"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"d0d2a10a-df39-11f0-8ce2-530392d8e955\" class=\"prov-article\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>Điều 1. </strong>Sửa đổi, bổ sung điểm d khoản 1 Điều 13; khoản 2 Điều 16; khoản 1 Điều 17 và điểm c khoản 2 Điều 18 của Điều lệ Trường mầm non ban hành kèm theo Quyết định số <a target=\"_blank\" rel=\"noopener noreferrer\">14/2008/QĐ-BGDĐT</a> ngày 07 tháng 4 năm 2008 của Bộ trưởng Bộ Giáo dục và Đào tạo và đã được sửa đổi, bổ sung tại Thông tư số <a target=\"_blank\" rel=\"noopener noreferrer\">44/2010/TT-BGDĐT</a> ngày 30 tháng 12 năm 2010 của Bộ trưởng Bộ Giáo dục và Đào tạo về việc sửa đổi, bổ sung Điều lệ trường mầm non, như sau:</span></p>\n ",
+    "dom_order": 16,
+    "anchors": []
+  },
+  {
+    "text": "1. Điểm d khoản 1 Điều 13 được sửa đổi, bổ sung như sau:",
+    "tag": "p",
+    "classes": [
+      "prov-clause"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"d0d2a114-df39-11f0-8b1b-a3e2d64ba6ae\" class=\"prov-clause\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>1. Điểm d khoản 1 Điều 13 được sửa đổi, bổ sung như sau:</strong></span></p>\n ",
+    "dom_order": 17,
+    "anchors": []
+  },
+  {
+    "text": "\"d. Mỗi nhóm trẻ, lớp mẫu giáo có không quá 2 trẻ cùng một loại khuyết tật. Việc tổ chức hoạt động giáo dục cho trẻ em khuyết tật học hòa nhập trong nhà trường, nhà trẻ thực hiện theo quy định của Luật Người khuyết tật và các văn bản hướng dẫn thi hành\".",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">\"d. Mỗi nhóm trẻ, lớp mẫu giáo có không quá 2 trẻ cùng một loại khuyết tật. Việc tổ chức hoạt động giáo dục cho trẻ em khuyết tật học hòa nhập trong nhà trường, nhà trẻ thực hiện theo quy định của Luật Người khuyết tật và các văn bản hướng dẫn thi hành\".</span></p>\n ",
+    "dom_order": 18,
+    "anchors": []
+  },
+  {
+    "text": "2. Khoản 2 Điều 16 được sửa đổi, bổ sung như sau:",
+    "tag": "p",
+    "classes": [
+      "prov-clause"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"d0d2a11e-df39-11f0-8156-5737d7cb6c84\" class=\"prov-clause\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>2. Khoản 2 Điều 16 được sửa đổi, bổ sung như sau:</strong></span></p>\n ",
+    "dom_order": 19,
+    "anchors": []
+  },
+  {
+    "text": "\" 2. Hiệu trưởng do Trưởng phòng giáo dục và đào tạo bổ nhiệm đối với nhà trường, nhà trẻ công lập, công nhận đối với nhà trư­ờng, nhà trẻ dân lập, tư­ thục theo quy trình bổ nhiệm hoặc công nhận Hiệu trưởng của cấp có thẩm quyền.",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">\" 2. Hiệu trưởng do Trưởng phòng giáo dục và đào tạo bổ nhiệm đối với nhà trường, nhà trẻ công lập, công nhận đối với nhà trư­ờng, nhà trẻ dân lập, tư­ thục theo quy trình bổ nhiệm hoặc công nhận Hiệu trưởng của cấp có thẩm quyền. </span></p>\n ",
+    "dom_order": 20,
+    "anchors": []
+  },
+  {
+    "text": "Nhiệm kỳ của Hiệu trưởng nhà trường, nhà trẻ là 5 năm. Sau 5 năm, Hiệu trưởng được đánh giá và có thể bổ nhiệm lại hoặc công nhận lại. Đối với nhà trường, nhà trẻ công lập, mỗi Hiệu trưởng chỉ được giao quản lí một nhà trường hoặc một nhà trẻ không quá hai nhiệm kì.",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Nhiệm kỳ của Hiệu trưởng nhà trường, nhà trẻ là 5 năm. Sau 5 năm, Hiệu trưởng được đánh giá và có thể bổ nhiệm lại hoặc công nhận lại. Đối với nhà trường, nhà trẻ công lập, mỗi Hiệu trưởng chỉ được giao quản lí một nhà trường hoặc một nhà trẻ không quá hai nhiệm kì. </span></p>\n ",
+    "dom_order": 21,
+    "anchors": []
+  },
+  {
+    "text": "Sau mỗi năm học, mỗi nhiệm kì công tác, Hiệu trưởng nhà trường, nhà trẻ được cán bộ, giáo viên trong trường và cấp có thẩm quyền đánh giá về công tác quản lí các hoạt động và chất lượng giáo dục của nhà trường theo quy định\".",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Sau mỗi năm học, mỗi nhiệm kì công tác, Hiệu trưởng nhà trường, nhà trẻ được cán bộ, giáo viên trong trường và cấp có thẩm quyền đánh giá về công tác quản lí các hoạt động và chất lượng giáo dục của nhà trường theo quy định\".</span></p>\n ",
+    "dom_order": 22,
+    "anchors": []
+  },
+  {
+    "text": "3. Khoản 1 Điều 17 được sửa đổi, bổ sung như sau:",
+    "tag": "p",
+    "classes": [
+      "prov-clause"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"d0d2a128-df39-11f0-aeea-7bdfb1fd3d42\" class=\"prov-clause\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>3. Khoản 1 Điều 17 được sửa đổi, bổ sung như sau:</strong></span></p>\n ",
+    "dom_order": 23,
+    "anchors": []
+  },
+  {
+    "text": "\"1. Phó Hiệu trưởng do Trưởng phòng giáo dục và đào tạo bổ nhiệm đối với nhà trường, nhà trẻ công lập, công nhận đối với nhà trường, nhà trẻ dân lập, tư thục theo quy trình bổ nhiệm hoặc công nhận Phó Hiệu trưởng của cấp có thẩm quyền. Phó Hiệu trưởng là ngư­ời giúp việc cho Hiệu trưởng, chịu trách nhiệm trước Hiệu trưởng và trước pháp luật\".",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">\"1. Phó Hiệu trưởng do Trưởng phòng giáo dục và đào tạo bổ nhiệm đối với nhà trường, nhà trẻ công lập, công nhận đối với nhà trường, nhà trẻ dân lập, tư thục theo quy trình bổ nhiệm hoặc công nhận Phó Hiệu trưởng của cấp có thẩm quyền. Phó Hiệu trưởng là ngư­ời giúp việc cho Hiệu trưởng, chịu trách nhiệm trước Hiệu trưởng và trước pháp luật\".</span></p>\n ",
+    "dom_order": 24,
+    "anchors": []
+  },
+  {
+    "text": "4. Điểm c khoản 2 Điều 18 được sửa đổi, bổ sung như sau:",
+    "tag": "p",
+    "classes": [
+      "prov-clause"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"d0d2a132-df39-11f0-92e2-5729e335efc1\" class=\"prov-clause\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>4. Điểm c khoản 2 Điều 18 được sửa đổi, bổ sung như sau:</strong></span></p>\n ",
+    "dom_order": 25,
+    "anchors": []
+  },
+  {
+    "text": "\"c) Thủ tục thành lập:",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">\"c) Thủ tục thành lập: </span></p>\n ",
+    "dom_order": 26,
+    "anchors": []
+  },
+  {
+    "text": "Căn cứ vào cơ cấu tổ chức, nhiệm vụ, quyền hạn và hoạt động của Hội đồng trường, tập thể giáo viên và các tổ chức, đoàn thể nhà trường, nhà trẻ giới thiệu nhân sự, Hiệu trưởng tổng hợp danh sách nhân sự và làm tờ trình gửi phòng giáo dục và đào tạo. Chủ tịch Hội đồng trường do các thành viên hội đồng bầu; Thư ký hội đồng trường do Chủ tịch hội đồng trường chỉ định. Trưởng phòng giáo dục và đào tạo công nhận Hội đồng trường và Chủ tịch Hội đồng trường.",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Căn cứ vào cơ cấu tổ chức, nhiệm vụ, quyền hạn và hoạt động của Hội đồng trường, tập thể giáo viên và các tổ chức, đoàn thể nhà trường, nhà trẻ giới thiệu nhân sự, Hiệu trưởng tổng hợp danh sách nhân sự và làm tờ trình gửi phòng giáo dục và đào tạo. Chủ tịch Hội đồng trường do các thành viên hội đồng bầu; Thư ký hội đồng trường do Chủ tịch hội đồng trường chỉ định. Trưởng phòng giáo dục và đào tạo công nhận Hội đồng trường và Chủ tịch Hội đồng trường. </span></p>\n ",
+    "dom_order": 27,
+    "anchors": []
+  },
+  {
+    "text": "Nhiệm kỳ của Hội đồng trường là 5 năm. Hằng năm, nếu có sự thay đổi về nhân sự, Hiệu trưởng làm văn bản đề nghị cấp có thẩm quyền công nhận, bổ sung các thành viên Hội đồng trường\".",
+    "tag": "p",
+    "classes": [
+      "prov-content"
+    ],
+    "style_indent": null,
+    "is_bold": false,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p class=\"prov-content\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Nhiệm kỳ của Hội đồng trường là 5 năm. Hằng năm, nếu có sự thay đổi về nhân sự, Hiệu trưởng làm văn bản đề nghị cấp có thẩm quyền công nhận, bổ sung các thành viên Hội đồng trường\".</span></p>\n ",
+    "dom_order": 28,
+    "anchors": []
+  },
+  {
+    "text": "Điều 2. Thông tư này có hiệu lực thi hành kể từ ngày 27 tháng 3 năm 2011. Các quy định trước đây trái với Thông tư này đều bị bãi bỏ.",
+    "tag": "p",
+    "classes": [
+      "prov-article"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"d0d2a13c-df39-11f0-90d9-1fb4dfa56f76\" class=\"prov-article\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>Điều 2. </strong>Thông tư này có hiệu lực thi hành kể từ ngày 27 tháng 3 năm 2011. Các quy định trước đây trái với Thông tư này đều bị bãi bỏ.</span></p>\n ",
+    "dom_order": 29,
+    "anchors": []
+  },
+  {
+    "text": "Điều 3. Chánh Văn phòng, Vụ trưởng Vụ Giáo dục Mầm non, Thủ trưởng các đơn vị có liên quan thuộc Bộ Giáo dục và Đào tạo, Chủ tịch Ủy ban nhân dân các tỉnh, thành phố trực thuộc Trung ương, Giám đốc sở giáo dục và đào tạo chịu trách nhiệm thi hành Thông tư này./.",
+    "tag": "p",
+    "classes": [
+      "prov-article"
+    ],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<p id=\"d0d2a146-df39-11f0-933f-f712e71cf3f7\" class=\"prov-article\" style=\"font-family: 'Times New Roman', Times, serif;\"><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\"><strong>Điều 3. </strong>Chánh Văn phòng, Vụ trưởng Vụ Giáo dục Mầm non, Thủ trưởng các đơn vị có liên quan thuộc Bộ Giáo dục và Đào tạo, Chủ tịch Ủy ban nhân dân các tỉnh, thành phố trực thuộc Trung ương, Giám đốc sở giáo dục và đào tạo chịu trách nhiệm thi hành Thông tư này./.</span></p>\n ",
+    "dom_order": 30,
+    "anchors": []
+  },
+  {
+    "text": "KT. BỘ TRƯỞNG \n THỨ TRƯỞNG",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<div style=\"font-weight: bold; text-transform: uppercase; line-height: 1.3;\">\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">KT. BỘ TRƯỞNG </span>\n <br><span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">THỨ TRƯỞNG</span>\n </div>\n ",
+    "dom_order": 31,
+    "anchors": []
+  },
+  {
+    "text": "(Đã ký)",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<div style=\"font-style: italic; font-weight: bold;\">\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">(Đã ký)</span>\n </div>\n ",
+    "dom_order": 32,
+    "anchors": []
+  },
+  {
+    "text": "Nguyễn Thị Nghĩa",
+    "tag": "div",
+    "classes": [],
+    "style_indent": null,
+    "is_bold": true,
+    "is_italic": false,
+    "is_center": false,
+    "is_table": false,
+    "html_raw": "<div style=\"font-weight: bold; margin-top: 16px;\">\n <span style=\"font-family: 'times new roman', times, serif; font-size: 14px;\">Nguyễn Thị Nghĩa</span>\n </div>\n ",
+    "dom_order": 33,
+    "anchors": []
+  }
+]

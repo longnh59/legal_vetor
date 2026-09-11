@@ -1,0 +1,29 @@
+[project]
+name = "engine"
+version = "0.1.0"
+description = "Engine boc tach van ban quy pham phap luat Viet Nam thanh cay co cau truc"
+readme = "README.md"
+authors = [
+    { name = "longnh59", email = "phamhuylong2k@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.13",
+    "typer>=0.15",
+    "lxml>=5.3",
+    "pyarrow>=18",
+    "duckdb>=1.5.5",
+]
+
+[project.scripts]
+engine = "engine:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "huggingface-hub>=0.30",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.3,<0.12.0"]
+build-backend = "uv_build"

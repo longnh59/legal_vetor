@@ -11,7 +11,7 @@ import json
 import os
 import urllib.error
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from pathlib import Path
 
 from engine.classify import Classification
@@ -114,11 +114,22 @@ def enrich_with_llm(
         next_text = blocks[i + 1].text if i + 1 < len(blocks) else ""
         return llm.classify(blocks[i], prev_text, next_text)
 
-    with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        results = pool.map(_classify_at, pending)
-        for i, llm_cls in zip(pending, results):
-            if llm_cls.node_type is not None:
-                out[i] = llm_cls
+    # Per-call urlopen(timeout=30) does not always bound wall-clock time (a
+    # server trickling bytes can dodge socket-level timeout entirely -
+    # verified: one real call hung 30+ minutes). A plain `with ThreadPoolExecutor`
+    # would then hang forever too, since __exit__ blocks on shutdown(wait=True).
+    # future.result(timeout=...) here is what actually caps the wait; stuck
+    # threads are abandoned (cancel_futures, wait=False) rather than joined.
+    pool = ThreadPoolExecutor(max_workers=max_workers)
+    futures = {pool.submit(_classify_at, i): i for i in pending}
+    for fut, i in futures.items():
+        try:
+            llm_cls = fut.result(timeout=45)
+        except FutureTimeoutError:
+            continue
+        if llm_cls.node_type is not None:
+            out[i] = llm_cls
+    pool.shutdown(wait=False, cancel_futures=True)
     return out
 
 

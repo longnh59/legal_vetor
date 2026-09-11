@@ -130,12 +130,13 @@ def build_tree(
         if cls.node_type is None:
             top = stack[-1] if stack else None
             if top is not None and top.node_type == "dieu" and not dieu_has_child.get(top.node_id):
-                push("khoan", None, 0.5, "style", block.text, block.html_raw)
-                dieu_has_child[top.node_id] = True
-                # number_norm defaults to None above; force it to the sentinel "0"
-                nodes[-1].number_norm = "0"
-                nodes[-1].node_id = f"{top.node_id}/khoan-0"
-                nodes[-1].path = f"{top.path}.khoan_0"
+                # Pass "0" as a real number_raw (not a post-hoc node_id rewrite)
+                # so push()'s seen_ids dedup applies to it like any other node -
+                # verified bug: a rewrite-after-the-fact left seen_ids holding
+                # the pre-rewrite id, so a later genuine khoan numbered "0"
+                # (regex "0. " matches table content, doc 20793) collided
+                # undetected on the same "dieu-3/khoan-0" string.
+                push("khoan", "0", 0.5, "style", block.text, block.html_raw)
                 continue
             if top is not None:
                 _append_to(nodes[-1], block)

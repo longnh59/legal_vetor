@@ -66,6 +66,7 @@ def load_all(db_path: Path = DB_PATH, batch_size: int = 2000) -> duckdb.DuckDBPy
     placeholders = ",".join(["?"] * len(NODE_COLUMNS))
     batch: list[tuple] = []
     total_nodes = 0
+    docs_done = 0
 
     def flush():
         nonlocal batch, total_nodes
@@ -86,6 +87,9 @@ def load_all(db_path: Path = DB_PATH, batch_size: int = 2000) -> duckdb.DuckDBPy
             batch.append(tuple(d[c] for c in NODE_COLUMNS))
         if len(batch) >= batch_size:
             flush()
+        docs_done += 1
+        if docs_done % 5000 == 0:
+            print(f"docs processed: {docs_done}/{len(indexable)}, nodes so far: {total_nodes + len(batch)}", flush=True)
     flush()
     print("nodes:", total_nodes)
 

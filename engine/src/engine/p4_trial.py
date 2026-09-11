@@ -30,7 +30,7 @@ def run_trial(sample_size: int = 200) -> None:
     after = Counter()
     improved = []
 
-    for r in warn_failed:
+    for idx, r in enumerate(warn_failed, 1):
         doc_id = r["doc_id"]
         html_str = content.get(doc_id) or ""
         m = meta.get(doc_id, {})
@@ -38,6 +38,7 @@ def run_trial(sample_size: int = 200) -> None:
         after[new_r.verdict] += 1
         if new_r.verdict != r["verdict"]:
             improved.append((doc_id, r["verdict"], new_r.verdict))
+        print(f"[{idx}/{len(warn_failed)}] {doc_id}: {r['verdict']} -> {new_r.verdict}", flush=True)
 
     print(f"Sample: {len(warn_failed)} docs")
     print(f"Before: {dict(before)}")

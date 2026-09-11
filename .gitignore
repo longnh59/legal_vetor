@@ -12,3 +12,5 @@ data/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 engine/debug_*.json
+.env
+engine/.env

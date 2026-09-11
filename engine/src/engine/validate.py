@@ -14,6 +14,7 @@ import pyarrow.parquet as pq
 
 from engine.build_tree import build_tree, doc_slug_for
 from engine.classify import Classifier
+from engine.classify_llm import LlmClassifier, enrich_with_llm
 from engine.clean import clean_html
 from engine.config import CHAR_COVERAGE_CLEAN_MIN, CHAR_COVERAGE_WARN_MIN, REPORTS_DIR
 from engine.flatten import flatten
@@ -104,7 +105,13 @@ def _hierarchy_ok(nodes: list[Node]) -> bool:
     return True
 
 
-def validate_document(doc_id: str, html_str: str, classifier: Classifier, so_ky_hieu: str | None = None) -> QualityReport:
+def validate_document(
+    doc_id: str,
+    html_str: str,
+    classifier: Classifier,
+    so_ky_hieu: str | None = None,
+    llm: LlmClassifier | None = None,
+) -> QualityReport:
     tree = clean_html(html_str)
     blocks = flatten(tree) if tree is not None else []
     # 732+ docs genuinely have empty content_html (e.g. "<body></body>", or ""),
@@ -122,6 +129,8 @@ def validate_document(doc_id: str, html_str: str, classifier: Classifier, so_ky_
         part_blocks = blocks[part.start_block : part.end_block + 1]
         classifications = [classifier.classify(b) for b in part_blocks]
         classifications = mask_quoted_blocks(part_blocks, classifications)
+        if llm is not None:
+            classifications = enrich_with_llm(part_blocks, classifications, llm)
         for cls in classifications:
             if cls.node_type is not None:
                 n_classified += 1

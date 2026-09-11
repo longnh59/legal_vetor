@@ -16,7 +16,7 @@ from collections import defaultdict
 from engine.classify import Classification
 from engine.models import Block, DocumentPart, Node
 
-LEVELS = ["phan", "chuong", "muc", "tieu_muc", "dieu", "khoan", "diem"]
+LEVELS = ["phan", "chuong", "muc", "tieu_muc", "dieu", "khoan", "diem", "gach_dau_dong"]
 LEVEL_RANK = {lvl: i for i, lvl in enumerate(LEVELS)}
 
 

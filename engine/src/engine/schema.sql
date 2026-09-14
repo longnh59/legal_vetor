@@ -4,7 +4,7 @@
 -- but subtree queries here should use `node_id LIKE 'prefix/%'` instead
 -- (node_id is itself a hierarchical, globally unique path).
 
-CREATE TABLE documents (
+CREATE TABLE IF NOT EXISTS documents (
     id TEXT PRIMARY KEY,
     title TEXT,
     so_ky_hieu TEXT,
@@ -25,14 +25,14 @@ CREATE TABLE documents (
 
 -- Raw doc-level pairs from data/relationships.parquet. NOT the same as `edges`:
 -- these are un-resolved (no target node_id yet) - P7's job is to resolve them.
-CREATE TABLE document_relationships (
+CREATE TABLE IF NOT EXISTS document_relationships (
     doc_id TEXT,
     other_doc_id TEXT,
     relationship TEXT
 );
 
 -- One row per document, from reports/quality.parquet (P3 validator output).
-CREATE TABLE parse_quality (
+CREATE TABLE IF NOT EXISTS parse_quality (
     doc_id TEXT PRIMARY KEY,
     n_nodes INTEGER,
     char_coverage DOUBLE,
@@ -48,7 +48,7 @@ CREATE TABLE parse_quality (
     template_family TEXT
 );
 
-CREATE TABLE nodes (
+CREATE TABLE IF NOT EXISTS nodes (
     node_id TEXT PRIMARY KEY,
     doc_id TEXT,
     part_id TEXT,
@@ -67,13 +67,13 @@ CREATE TABLE nodes (
     confidence DOUBLE,
     classified_by TEXT
 );
-CREATE INDEX idx_nodes_doc_id ON nodes(doc_id);
-CREATE INDEX idx_nodes_parent_id ON nodes(parent_id);
+CREATE INDEX IF NOT EXISTS idx_nodes_doc_id ON nodes(doc_id);
+CREATE INDEX IF NOT EXISTS idx_nodes_parent_id ON nodes(parent_id);
 
 -- Empty until P7 (doc-level relationship -> node-level resolution) and P8
 -- (semantic linking) are built; schema matches PLAN_v2 section 4.3 so those
 -- phases can write into it without a migration.
-CREATE TABLE edges (
+CREATE TABLE IF NOT EXISTS edges (
     src_node_id TEXT,
     dst_node_id TEXT,
     dst_doc_id TEXT,

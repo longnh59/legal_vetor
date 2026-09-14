@@ -31,36 +31,53 @@ def _parse_date_sql(col: str) -> str:
     return f"TRY_STRPTIME({col}, '%d/%m/%Y')::DATE AS {col}"
 
 
-def load_all(db_path: Path = DB_PATH, batch_size: int = 2000) -> duckdb.DuckDBPyConnection:
-    db_path.unlink(missing_ok=True)
+def load_all(db_path: Path = DB_PATH, batch_size: int = 2000, resume: bool = True) -> duckdb.DuckDBPyConnection:
+    """resume=True (default): if db_path already has data (e.g. from a killed
+    prior run), reconnect and skip doc_ids that already have nodes committed,
+    instead of deleting and starting over. Safe because flush() only ever
+    happens at a document boundary (never splits one doc's nodes across two
+    flushes), so "has any node row" == "fully loaded" for a doc.
+    resume=False forces a clean rebuild (deletes db_path first)."""
+    resuming = resume and db_path.exists()
+    if not resuming:
+        db_path.unlink(missing_ok=True)
     con = duckdb.connect(str(db_path))
     con.execute(SCHEMA_PATH.read_text(encoding="utf-8"))
 
-    con.execute(f"""
-        INSERT INTO documents
-        SELECT id, title, so_ky_hieu,
-               {_parse_date_sql("ngay_ban_hanh")},
-               loai_van_ban,
-               {_parse_date_sql("ngay_co_hieu_luc")},
-               {_parse_date_sql("ngay_het_hieu_luc")},
-               nguon_thu_thap, nganh, linh_vuc, co_quan_ban_hanh,
-               chuc_danh, nguoi_ky, pham_vi, thong_tin_ap_dung, tinh_trang_hieu_luc
-        FROM read_parquet('{METADATA_PARQUET.as_posix()}')
-    """)
-    print("documents:", con.execute("SELECT count(*) FROM documents").fetchone()[0])
+    if resuming and con.execute("SELECT count(*) FROM documents").fetchone()[0] > 0:
+        print("resuming: documents/document_relationships/parse_quality already loaded, skipping", flush=True)
+    else:
+        con.execute(f"""
+            INSERT INTO documents
+            SELECT id, title, so_ky_hieu,
+                   {_parse_date_sql("ngay_ban_hanh")},
+                   loai_van_ban,
+                   {_parse_date_sql("ngay_co_hieu_luc")},
+                   {_parse_date_sql("ngay_het_hieu_luc")},
+                   nguon_thu_thap, nganh, linh_vuc, co_quan_ban_hanh,
+                   chuc_danh, nguoi_ky, pham_vi, thong_tin_ap_dung, tinh_trang_hieu_luc
+            FROM read_parquet('{METADATA_PARQUET.as_posix()}')
+        """)
+        print("documents:", con.execute("SELECT count(*) FROM documents").fetchone()[0])
 
-    con.execute(f"INSERT INTO document_relationships SELECT * FROM read_parquet('{RELATIONSHIPS_PARQUET.as_posix()}')")
-    print("document_relationships:", con.execute("SELECT count(*) FROM document_relationships").fetchone()[0])
+        con.execute(f"INSERT INTO document_relationships SELECT * FROM read_parquet('{RELATIONSHIPS_PARQUET.as_posix()}')")
+        print("document_relationships:", con.execute("SELECT count(*) FROM document_relationships").fetchone()[0])
 
-    quality_path = REPORTS_DIR / "quality.parquet"
-    con.execute(f"INSERT INTO parse_quality SELECT * FROM read_parquet('{quality_path.as_posix()}')")
-    print("parse_quality:", con.execute("SELECT count(*) FROM parse_quality").fetchone()[0])
+        quality_path = REPORTS_DIR / "quality.parquet"
+        con.execute(f"INSERT INTO parse_quality SELECT * FROM read_parquet('{quality_path.as_posix()}')")
+        print("parse_quality:", con.execute("SELECT count(*) FROM parse_quality").fetchone()[0])
+        con.commit()
 
     indexable = {
         row[0]
         for row in con.execute("SELECT doc_id FROM parse_quality WHERE verdict IN ('clean', 'warn')").fetchall()
     }
     print(f"{len(indexable)} docs to parse into nodes (clean+warn)")
+
+    already_loaded: set[str] = set()
+    if resuming:
+        already_loaded = {row[0] for row in con.execute("SELECT DISTINCT doc_id FROM nodes").fetchall()}
+        print(f"resuming: {len(already_loaded)} docs already have nodes, skipping those", flush=True)
 
     meta = metadata_by_id()
     classifier = Classifier()
@@ -74,12 +91,19 @@ def load_all(db_path: Path = DB_PATH, batch_size: int = 2000) -> duckdb.DuckDBPy
         if not batch:
             return
         con.executemany(f"INSERT INTO nodes VALUES ({placeholders})", batch)
+        # Without this, every batch lands in one ever-growing uncommitted
+        # transaction - verified: a full run's WAL grew large enough that
+        # each subsequent flush() got progressively slower (CPU busy the
+        # whole time, but "docs processed" stalled for 30+ min with no
+        # single slow document to blame). Committing per-batch keeps each
+        # transaction small and flush() cost roughly constant.
+        con.commit()
         total_nodes += len(batch)
         batch = []
 
     for row in iter_content_rows():
         doc_id = row["id"]
-        if doc_id not in indexable:
+        if doc_id not in indexable or doc_id in already_loaded:
             continue
         m = meta.get(doc_id, {})
         t0 = time.time()

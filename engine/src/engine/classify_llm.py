@@ -51,12 +51,13 @@ class LlmClassifier:
         self.api_key = api_key or os.environ["LLM_API_KEY"]
         self.model = model or os.environ["LLM_MODEL"]
 
-    def _call(self, user_content: str) -> dict:
+    def chat(self, user_content: str, system_prompt: str = _SYSTEM_PROMPT, timeout: int = 60) -> str:
+        """Raw chat call, returns the assistant's text content verbatim."""
         body = json.dumps(
             {
                 "model": self.model,
                 "messages": [
-                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
                 "temperature": 0,
@@ -68,9 +69,12 @@ class LlmClassifier:
             headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             payload = json.loads(resp.read())
-        content = payload["choices"][0]["message"]["content"].strip()
+        return payload["choices"][0]["message"]["content"].strip()
+
+    def _call(self, user_content: str) -> dict:
+        content = self.chat(user_content)
         if content.startswith("```"):
             content = content.strip("`").removeprefix("json").strip()
         return json.loads(content)

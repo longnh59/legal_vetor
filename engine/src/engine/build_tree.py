@@ -7,6 +7,8 @@ too). A Điều with unnumbered content directly under it gets a synthetic
 khoan-0 child so every Điều's content lives under a khoan (trap 9).
 Unrecognized blocks that appear before any structural node has opened (e.g.
 "Căn cứ ...") become a `preamble` node instead of being dropped (trap 4).
+Signature/footer blocks ("TM. ...", "Nơi nhận:", a signing dateline) become a
+`footer` node instead of a fake trailing khoan-0, wherever they appear.
 """
 
 import re
@@ -18,6 +20,32 @@ from engine.models import Block, DocumentPart, Node
 
 LEVELS = ["phan", "chuong", "muc", "tieu_muc", "dieu", "khoan", "diem", "gach_dau_dong"]
 LEVEL_RANK = {lvl: i for i, lvl in enumerate(LEVELS)}
+
+# Signature/footer blocks ("TM. UBND...", "Nơi nhận:", a bare "<place>, ngày
+# ... tháng ... năm ..." dateline) were falling through to the khoan-0 trailing-
+# content fallback below, mislabeling them as a real Khoản - verified via LLM
+# audit of 15 "clean"-verdict docs (9/13 judgeable ones hit exactly this).
+# Caught here, before that fallback, so they land in their own `footer` node
+# instead of polluting the Điều/Khoản hierarchy.
+#
+# Deliberately NOT included: bare titles like "CHỦ TỊCH"/"GIÁM ĐỐC"/"CHÁNH VĂN
+# PHÒNG" - verified regression (doc 130987): "Chánh Văn phòng ..., Giám đốc Sở
+# ... chịu trách nhiệm thi hành Quyết định này." is real Điều content (the
+# standard "điều khoản thi hành" clause), not a signature block, and starts
+# with the exact same words. Only markers that never start an ordinary
+# sentence are safe here.
+RE_FOOTER = re.compile(
+    # no trailing \b: "TM." ends on a non-word char, so \b would never match there
+    r"^\s*(TM\.|KT\.|Nơi nhận|\(?Đã ký\)?)",
+    re.IGNORECASE,
+)
+RE_SIGNATURE_DATE = re.compile(
+    r"^\s*[^,\n]{2,40},\s*ngày\s+\d{1,2}\s+tháng\s+\d{1,2}\s+năm\s+\d{4}\s*\.?\s*$", re.IGNORECASE
+)
+
+
+def _is_footer(text: str) -> bool:
+    return bool(RE_FOOTER.match(text) or RE_SIGNATURE_DATE.match(text))
 
 
 def slugify(text: str) -> str:
@@ -125,9 +153,32 @@ def build_tree(
         return node
 
     preamble: Node | None = None
+    footer: Node | None = None
 
     for block, cls in zip(blocks, classifications):
         if cls.node_type is None:
+            if _is_footer(block.text):
+                if footer is None:
+                    footer = Node(
+                        node_id=f"{doc_slug}/{part.part_id}/footer",
+                        doc_id=doc_id,
+                        part_id=part.part_id,
+                        parent_id=None,
+                        path="footer",
+                        depth=0,
+                        order_index=len(nodes),
+                        node_type="footer",
+                        text=block.text,
+                        text_full=block.text,
+                        breadcrumb=block.text[:60],
+                        html_raw=block.html_raw,
+                        confidence=0.6,
+                        classified_by="regex",
+                    )
+                    nodes.append(footer)
+                else:
+                    _append_to(footer, block)
+                continue
             top = stack[-1] if stack else None
             if top is not None and top.node_type == "dieu" and not dieu_has_child.get(top.node_id):
                 # Pass "0" as a real number_raw (not a post-hoc node_id rewrite)
@@ -216,6 +267,14 @@ def demo() -> None:
     assert nodes4[0].node_type == "preamble"
     assert "Căn cứ Nghị định" in nodes4[0].text
     assert nodes4[1].node_type == "dieu"
+
+    # signature/footer content is split into its own node, not a fake khoan-0
+    # (verified via LLM audit: 9/13 judgeable "clean" docs had this bug)
+    blocks5 = [b("Điều 5. Điều khoản thi hành"), b("TM. ỦY BAN NHÂN DÂN\nCHỦ TỊCH"), b("Nơi nhận:\n- Như trên;")]
+    classes5 = [c("dieu", "5"), c(None, None, 0.0, None), c(None, None, 0.0, None)]
+    nodes5 = build_tree("doc1", "quyet-dinh-1", part, blocks5, classes5)
+    assert [n.node_type for n in nodes5] == ["dieu", "footer"]
+    assert "Nơi nhận" in nodes5[1].text_full and "TM. ỦY BAN" in nodes5[1].text_full
 
     print("build_tree.py demo OK")
 

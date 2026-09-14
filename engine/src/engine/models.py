@@ -32,6 +32,7 @@ NodeType = Literal[
     "gach_dau_dong",
     "preamble",
     "phu_luc",
+    "footer",
 ]
 
 ClassifiedBy = Literal["regex", "css_class", "style", "llm"]

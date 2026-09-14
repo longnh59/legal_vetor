@@ -6,6 +6,7 @@ Per plan section 7: only 'clean' and 'warn' docs get indexed into `nodes`;
 'failed' docs are excluded (queued for review, not indexed).
 """
 
+import time
 from pathlib import Path
 
 import duckdb
@@ -81,7 +82,11 @@ def load_all(db_path: Path = DB_PATH, batch_size: int = 2000) -> duckdb.DuckDBPy
         if doc_id not in indexable:
             continue
         m = meta.get(doc_id, {})
+        t0 = time.time()
         nodes = parse_document(doc_id, row.get("content_html") or "", classifier, so_ky_hieu=m.get("so_ky_hieu"))
+        elapsed = time.time() - t0
+        if elapsed > 3:
+            print(f"SLOW doc {doc_id}: {elapsed:.1f}s, {len(nodes)} nodes, html_len={len(row.get('content_html') or '')}", flush=True)
         for n in nodes:
             d = n.model_dump()
             batch.append(tuple(d[c] for c in NODE_COLUMNS))
